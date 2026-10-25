@@ -96,25 +96,43 @@ async function loadOSM() {
   const [w, s] = pr.toLL(-half, -half), [e, n] = pr.toLL(half, half);
   setStatus("Downloading streets from OpenStreetMap…"); S.busy = true; $("osm-load").disabled = true;
   try {
-    const q = P.overpassQuery(s, w, n, e, $("osm-mode").value);
-    const net = P.fromOverpass(await overpass(q));
+    const mode = $("osm-mode").value;
+    let net;
+    try { net = await fromVectorTiles(s, w, n, e, mode); }
+    catch (vtErr) { net = P.fromOverpass(await overpass(P.overpassQuery(s, w, n, e, mode))); }
     if (net.edges.length < 10) throw new Error("too few streets in this area");
     S.busy = false;
-    loadNetwork(net, `${fmt(net.edges.length)} street segments around ${lat.toFixed(4)}, ${lon.toFixed(4)}.`, "Road data and map tiles © OpenStreetMap contributors", true);
+    loadNetwork(net, `${fmt(Math.round(net.length / 100) / 10)} km of streets around ${lat.toFixed(4)}, ${lon.toFixed(4)}. Real areas are large: add volunteers and walking time to cover more of them.`, "Streets: OpenFreeMap / OpenMapTiles · data and map tiles © OpenStreetMap contributors", true);
   } catch (err) { setStatus("Couldn’t load streets: " + err.message + ". Wait a minute and try again, or pick a smaller area."); }
   finally { S.busy = false; $("osm-load").disabled = false; }
 }
 $("osm-load").onclick = loadOSM;
 
-// Public Overpass servers are shared and sometimes busy, so try each in turn.
-const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter",
-                  "https://overpass.private.coffee/api/interpreter"];
+// Streets come from OpenStreetMap vector tiles served by OpenFreeMap (a CDN, fast
+// and reliable). If that fails, fall back to the public Overpass API, which is
+// often overloaded and can take a minute or more to answer.
+let tileTemplate = null;
+async function fromVectorTiles(s, w, n, e, mode) {
+  setStatus("Downloading streets from OpenStreetMap…");
+  if (!tileTemplate) {
+    const r = await fetch("https://tiles.openfreemap.org/planet");
+    if (!r.ok) throw new Error("tile index returned " + r.status);
+    tileTemplate = (await r.json()).tiles[0];
+  }
+  const tiles = await Promise.all(P.tilesFor(s, w, n, e, 14).map(async ([z, x, y]) => {
+    const r = await fetch(tileTemplate.replace("{z}", z).replace("{x}", x).replace("{y}", y));
+    if (!r.ok) throw new Error("tile returned " + r.status);
+    return { z, x, y, buf: await r.arrayBuffer() };
+  }));
+  return P.fromVectorTiles(tiles, s, w, n, e, mode);
+}
+const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
 async function overpass(query) {
   let last = "no server answered";
   for (const url of OVERPASS) {
-    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 30000);
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 120000);
     try {
-      setStatus(`Downloading streets from OpenStreetMap (${new URL(url).hostname})…`);
+      setStatus(`Trying the Overpass server ${new URL(url).hostname}. This can take a minute when it is busy…`);
       const r = await fetch(url, { method: "POST", signal: ctl.signal, body: "data=" + encodeURIComponent(query),
         headers: { "Content-Type": "application/x-www-form-urlencoded" } });
       if (r.ok) return await r.json();
