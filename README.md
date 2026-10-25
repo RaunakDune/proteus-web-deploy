@@ -22,22 +22,3 @@ The reference Python implementation lives at
 ```bash
 python3 -m http.server 8000   # then open http://localhost:8000
 ```
-
-## Deployment
-
-GitHub Pages, deployed from the `main` branch, root folder. DNS for `crowdsensinglab.org` is managed in Cloudflare:
-
-| Type | Name | Content | Proxy |
-|---|---|---|---|
-| A | `@` | 185.199.108.153 | DNS only |
-| A | `@` | 185.199.109.153 | DNS only |
-| A | `@` | 185.199.110.153 | DNS only |
-| A | `@` | 185.199.111.153 | DNS only |
-| CNAME | `www` | raunakdune.github.io | DNS only |
-
-Map data © OpenStreetMap contributors. Code: MIT licence.
-
-## Updating
-
-GitHub Pages lets browsers cache files for 10 minutes. After changing a file in `js/`,
-bump the `?v=` tag on its `<script>` line in `index.html` so visitors get the new copy.
