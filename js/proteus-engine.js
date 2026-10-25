@@ -87,6 +87,93 @@ const Proteus = (() => {
     return buildNetwork(ll, E);
   }
 
+  /* ---------------------------------------------- OpenStreetMap vector tiles */
+  // Minimal Mapbox Vector Tile (protobuf) decoder: returns the LineString
+  // features of one layer as arrays of [x, y] in tile units, with properties.
+  function decodeMVT(buf, wantLayer) {
+    const b = new Uint8Array(buf);
+    function varint(st) { let r = 0, m = 1, c; do { c = b[st.p++]; r += (c & 0x7f) * m; m *= 128; } while (c & 0x80); return r; }
+    function skip(st, wt) { if (wt === 0) varint(st); else if (wt === 1) st.p += 8; else if (wt === 2) { const l = varint(st); st.p += l; } else if (wt === 5) st.p += 4; }
+    function str(st, end) { return new TextDecoder().decode(b.subarray(st.p, end)); }
+    const out = [], st = { p: 0 };
+    while (st.p < b.length) {
+      const tag = varint(st), f = Math.floor(tag / 8), wt = tag & 7;
+      if (f !== 3 || wt !== 2) { skip(st, wt); continue; }
+      const lend = varint(st) + st.p; let name = '', extent = 4096; const keys = [], vals = [], feats = [];
+      while (st.p < lend) {
+        const t = varint(st), lf = Math.floor(t / 8), lw = t & 7;
+        if (lf === 1) { const l = varint(st); name = str(st, st.p + l); st.p += l; }
+        else if (lf === 3) { const l = varint(st); keys.push(str(st, st.p + l)); st.p += l; }
+        else if (lf === 4) { const vend = varint(st) + st.p; let v = null;
+          while (st.p < vend) { const vt = varint(st), vf = Math.floor(vt / 8), vw = vt & 7;
+            if (vf === 1) { const l = varint(st); v = str(st, st.p + l); st.p += l; } else if (vf === 7) v = !!varint(st);
+            else if (vf === 4 || vf === 5) v = varint(st); else skip(st, vw); }
+          vals.push(v); }
+        else if (lf === 5) extent = varint(st);
+        else if (lf === 2) { const l = varint(st); feats.push([st.p, st.p + l]); st.p += l; }
+        else skip(st, lw);
+      }
+      st.p = lend;
+      if (name !== wantLayer) continue;
+      for (const [fs, fe] of feats) {
+        const fst = { p: fs }; let type = 0, tags = [], geom = [];
+        while (fst.p < fe) {
+          const t = varint(fst), ff = Math.floor(t / 8), fw = t & 7;
+          if ((ff === 2 || ff === 4) && fw === 2) { const end = varint(fst) + fst.p; const arr = []; while (fst.p < end) arr.push(varint(fst)); if (ff === 2) tags = arr; else geom = arr; }
+          else if (ff === 3) type = varint(fst); else skip(fst, fw);
+        }
+        if (type !== 2) continue;
+        const props = {}; for (let i = 0; i + 1 < tags.length; i += 2) props[keys[tags[i]]] = vals[tags[i + 1]];
+        const lines = []; let x = 0, y = 0, i = 0, cur = null;
+        const zz = (n) => (n % 2 ? -(n + 1) / 2 : n / 2);
+        while (i < geom.length) {
+          const cmd = geom[i] & 7, cnt = Math.floor(geom[i] / 8); i++;
+          for (let k = 0; k < cnt && cmd !== 7; k++) { x += zz(geom[i++]); y += zz(geom[i++]);
+            if (cmd === 1) { cur = [[x, y]]; lines.push(cur); } else if (cur) cur.push([x, y]); }
+        }
+        out.push({ props, lines, extent });
+      }
+    }
+    return out;
+  }
+
+  const DRIVE = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor', 'service']);
+  const WALK = new Set(['primary', 'secondary', 'tertiary', 'minor', 'service', 'path', 'track']);
+  const lon2tile = (lo, z) => (lo + 180) / 360 * 2 ** z;
+  const lat2tile = (la, z) => (1 - Math.log(Math.tan(la * D2R) + 1 / Math.cos(la * D2R)) / Math.PI) / 2 * 2 ** z;
+  const tile2lon = (x, z) => x / 2 ** z * 360 - 180;
+  const tile2lat = (y, z) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y / 2 ** z))) / D2R;
+  function tilesFor(s, w, n, e, z) {
+    const out = [];
+    for (let x = Math.floor(lon2tile(w, z)); x <= Math.floor(lon2tile(e, z)); x++)
+      for (let y = Math.floor(lat2tile(n, z)); y <= Math.floor(lat2tile(s, z)); y++) out.push([z, x, y]);
+    return out;
+  }
+  // tiles: [{z, x, y, buf}] -> road network inside the lon/lat box.
+  // Vertices are matched on the shared global tile grid, so roads only join
+  // where OpenStreetMap joins them (bridges over roads stay unconnected).
+  function fromVectorTiles(tiles, s, w, n, e, mode) {
+    const keep = mode === 'walk' ? WALK : DRIVE, id = new Map(), ll = [], E = [], seen = new Set();
+    const node = (gx, gy, z, ext) => { const k = gx + ',' + gy; let i = id.get(k);
+      if (i === undefined) { i = ll.length; id.set(k, i); ll.push([tile2lon(gx / ext, z), tile2lat(gy / ext, z)]); } return i; };
+    for (const t of tiles) for (const f of decodeMVT(t.buf, 'transportation')) {
+      const cls = f.props.class; if (!keep.has(cls)) continue;
+      if (mode !== 'walk' && cls === 'service' && f.props.service && f.props.service !== 'alley') continue;
+      const ext = f.extent;
+      for (const line of f.lines) for (let i = 1; i < line.length; i++) {
+        const [ax, ay] = line[i - 1], [bx, by] = line[i];
+        const mx = (ax + bx) / 2, my = (ay + by) / 2;
+        if (mx < 0 || my < 0 || mx >= ext || my >= ext) continue;          // owned by the neighbouring tile
+        const lo = tile2lon(t.x + mx / ext, t.z), la = tile2lat(t.y + my / ext, t.z);
+        if (lo < w || lo > e || la < s || la > n) continue;
+        const gax = t.x * ext + ax, gay = t.y * ext + ay, gbx = t.x * ext + bx, gby = t.y * ext + by;
+        const a = node(gax, gay, t.z, ext), c = node(gbx, gby, t.z, ext); if (a === c) continue;
+        const k = a < c ? a + ',' + c : c + ',' + a; if (seen.has(k)) continue; seen.add(k); E.push([a, c]);
+      }
+    }
+    return buildNetwork(ll, E);
+  }
+
   function overpassQuery(s, w, n, e, mode) {
     const hw = mode === 'walk'
       ? 'footway|path|pedestrian|steps|living_street|residential|service|unclassified|tertiary|secondary|primary|cycleway'
@@ -413,6 +500,6 @@ const Proteus = (() => {
     return out;
   }
 
-  return { makeProj, syntheticGrid, fromCompact, fromOverpass, overpassQuery, simulate, verify, combine,
+  return { makeProj, syntheticGrid, fromCompact, fromOverpass, overpassQuery, decodeMVT, tilesFor, fromVectorTiles, simulate, verify, combine,
     combinedMap, handleIntersections, run, randomDestroy, chains, segDist };
 })();
