@@ -36,3 +36,8 @@ GitHub Pages, deployed from the `main` branch, root folder. DNS for `crowdsensin
 | CNAME | `www` | raunakdune.github.io | DNS only |
 
 Map data © OpenStreetMap contributors. Code: MIT licence.
+
+## Updating
+
+GitHub Pages lets browsers cache files for 10 minutes. After changing a file in `js/`,
+bump the `?v=` tag on its `<script>` line in `index.html` so visitors get the new copy.
