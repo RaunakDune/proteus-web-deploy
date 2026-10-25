@@ -57,7 +57,7 @@ function selectEl(el) { const r = document.createRange(); r.selectNodeContents(e
 /* ----------------------------------------------------------- demo state */
 const P = Proteus;
 const S = { area: "grid", net: null, chains: null, destroyed: new Set(), sim: null, res: null, animStep: Infinity,
-  view: { s: 1, cx: 0, cy: 0 }, hoverChain: -1, live: false, tiles: new Map(), seed: 7, busy: false };
+  view: { s: 1, cx: 0, cy: 0 }, hoverChain: -1, tilesOn: false, tiles: new Map(), seed: 7, busy: false };
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const canvas = $("map"), ctx = canvas.getContext("2d"), wrap = $("mapwrap");
 let colors = {};
@@ -71,8 +71,8 @@ for (const id in outputs) { const upd = () => ($(id + "-o").textContent = output
 function setStatus(t) { $("status").textContent = t; }
 
 /* ------------------------------------------------------------- networks */
-function loadNetwork(net, hint, attrib) {
-  S.net = net; S.chains = P.chains(net); S.sim = null; S.res = null;
+function loadNetwork(net, hint, attrib, tiles) {
+  S.tilesOn = !!tiles; S.net = net; S.chains = P.chains(net); S.sim = null; S.res = null;
   $("area-hint").textContent = hint; $("attrib").textContent = attrib;
   newDamage(); fit(); runAll(false);
 }
@@ -82,7 +82,7 @@ function selectArea(a) {
   for (const k of ["grid", "uh", "osm"]) $("area-" + k).setAttribute("aria-pressed", String(k === a));
   $("osm-box").hidden = a !== "osm";
   if (a === "grid") loadNetwork(P.syntheticGrid(), "A downtown-style street grid, rotated like central Houston. Blocks are 110 m long.", "Synthetic network");
-  if (a === "uh") loadNetwork(P.fromCompact(UH_DATA), "Footpaths of the University of Houston campus: the largest connected part of the map in ProteusData.", "UH campus: ProteusData, derived from © OpenStreetMap contributors");
+  if (a === "uh") loadNetwork(P.fromCompact(UH_DATA), "Footpaths of the University of Houston campus: the largest connected part of the map in ProteusData.", "UH campus: ProteusData · map tiles © OpenStreetMap contributors", true);
   if (a === "osm") { $("area-hint").textContent = "Enter a centre point and load its streets or footpaths straight from OpenStreetMap."; }
 }
 $("area-grid").onclick = () => selectArea("grid");
@@ -97,26 +97,32 @@ async function loadOSM() {
   setStatus("Downloading streets from OpenStreetMap…"); S.busy = true; $("osm-load").disabled = true;
   try {
     const q = P.overpassQuery(s, w, n, e, $("osm-mode").value);
-    const r = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(q),
-      headers: { "Content-Type": "application/x-www-form-urlencoded" } });
-    if (!r.ok) throw new Error("Overpass returned " + r.status);
-    const net = P.fromOverpass(await r.json());
+    const net = P.fromOverpass(await overpass(q));
     if (net.edges.length < 10) throw new Error("too few streets in this area");
     S.busy = false;
-    loadNetwork(net, `${fmt(net.edges.length)} street segments around ${lat.toFixed(4)}, ${lon.toFixed(4)}.`, "Road data © OpenStreetMap contributors");
-  } catch (err) { setStatus("Couldn’t load that area: " + err.message + ". Try a smaller area or another centre point."); }
+    loadNetwork(net, `${fmt(net.edges.length)} street segments around ${lat.toFixed(4)}, ${lon.toFixed(4)}.`, "Road data and map tiles © OpenStreetMap contributors", true);
+  } catch (err) { setStatus("Couldn’t load streets: " + err.message + ". Wait a minute and try again, or pick a smaller area."); }
   finally { S.busy = false; $("osm-load").disabled = false; }
 }
 $("osm-load").onclick = loadOSM;
 
-async function probeLive() {
-  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 4000);
-  try { const r = await fetch("https://overpass-api.de/api/status", { signal: ctl.signal }); S.live = r.ok; } catch (e) { S.live = false; }
-  clearTimeout(t);
-  if (!S.live) {
-    $("area-osm").disabled = true; $("area-osm").title = "OpenStreetMap can’t be reached right now";
-    $("demo-note").textContent += " OpenStreetMap can’t be reached from your browser right now, so “Any area” is off and the demo uses the two built-in networks.";
-  } else draw();
+// Public Overpass servers are shared and sometimes busy, so try each in turn.
+const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter",
+                  "https://overpass.private.coffee/api/interpreter"];
+async function overpass(query) {
+  let last = "no server answered";
+  for (const url of OVERPASS) {
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 30000);
+    try {
+      setStatus(`Downloading streets from OpenStreetMap (${new URL(url).hostname})…`);
+      const r = await fetch(url, { method: "POST", signal: ctl.signal, body: "data=" + encodeURIComponent(query),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" } });
+      if (r.ok) return await r.json();
+      last = r.status === 429 ? "the OpenStreetMap servers are busy" : "server returned " + r.status;
+    } catch (e) { last = e.name === "AbortError" ? "the request timed out" : "the server couldn’t be reached"; }
+    finally { clearTimeout(t); }
+  }
+  throw new Error(last);
 }
 
 /* ---------------------------------------------------------------- damage */
@@ -180,7 +186,7 @@ document.querySelectorAll("[data-show]").forEach((b) => b.addEventListener("clic
 }));
 
 function drawTiles(W, H) {
-  if (!S.live || !S.net) return;
+  if (!S.tilesOn || !S.net) return;
   const pr = S.net.proj, mpp = 1 / S.view.s;
   const z = Math.max(3, Math.min(19, Math.round(Math.log2(156543.03 * Math.cos(pr.lat0 * Math.PI / 180) / mpp))));
   const n = 2 ** z, lon2t = (lo) => (lo + 180) / 360 * n, lat2t = (la) => (1 - Math.log(Math.tan(la * Math.PI / 180) + 1 / Math.cos(la * Math.PI / 180)) / Math.PI) / 2 * n;
@@ -269,5 +275,4 @@ $("zfit").onclick = fit;
 /* ------------------------------------------------------------------ boot */
 resize();
 selectArea("grid");
-probeLive();
 })();
