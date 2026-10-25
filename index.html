@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proteus · Crowdsensing Lab</title>
+<link rel="canonical" href="https://crowdsensinglab.org/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="Proteus · Crowdsensing Lab">
+<meta property="og:description" content="Combining GPS traces collected by volunteers after a disaster into a verified map of passable roads. Live demo, paper, code and data.">
+<meta property="og:url" content="https://crowdsensinglab.org/">
+<meta property="og:type" content="website">
+<meta name="description" content="Proteus combines GPS traces collected by volunteers after a disaster into a verified map of the roads that are still passable.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Crowdsensing Lab. Layout: a survey-sheet page — compact masthead, the live map as the hero, then
+   ruled sections that read like a field report. Colours follow map-legend roles. */
+:root {
+  --paper: #f1f2ec; --panel: #e6e9e1; --ink: #1a2320; --muted: #5a6761; --rule: #c6cdc4;
+  --mapbg: #f8f8f4; --road: #aab3ac; --trace: #9fb0c2; --verified: #2c66d6;
+  --final: #0b7a52; --destroyed: #c63a2e; --junction: #d48a00; --agent: #1a2320;
+  --focus: #2c66d6; color-scheme: light;
+  --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --s-1: .8125rem; --s0: 1rem; --s1: 1.1875rem; --s2: 1.5rem; --s3: 2.25rem; --s4: clamp(2.75rem, 7vw, 4.75rem);
+}
+
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: var(--s0); line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1240px; margin-inline: auto }
+a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px }
+a:hover { color: var(--verified) }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -.01em }
+h2 { font-size: var(--s3); font-weight: 750; font-stretch: 85%; line-height: 1.05 }
+h3 { font-size: var(--s1); font-weight: 700; font-stretch: 95% }
+p { margin: 0 }
+.label { font-family: var(--f-mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.prose { max-width: 66ch }
+button, input, select { font: inherit; color: inherit }
+.num { font-variant-numeric: tabular-nums }
+
+/* masthead */
+.mast { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; justify-content: space-between;
+  padding-block: 18px 14px; border-bottom: 1px solid var(--rule) }
+.mark { font-family: var(--f-display); font-weight: 800; font-stretch: 112%; font-size: 1.125rem; letter-spacing: .02em; text-decoration: none }
+.mast nav { display: flex; flex-wrap: wrap; gap: 4px 18px; font-family: var(--f-display); font-stretch: 90%; font-size: .9375rem }
+.mast nav a { text-decoration: none; color: var(--muted) }
+.mast nav a:hover { color: var(--ink) }
+
+/* hero */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px 40px; align-items: end; padding-block: 36px 22px }
+.hero h1 { font-size: var(--s4); font-weight: 800; font-stretch: 78%; line-height: .92; letter-spacing: -.02em }
+.hero .lede { font-size: var(--s1); max-width: 56ch; margin-top: 14px }
+.cite-line { font-size: var(--s-1); color: var(--muted); max-width: 40ch; text-align: right }
+.cite-line a { color: var(--ink) }
+@media (max-width: 760px) { .hero { grid-template-columns: 1fr } .cite-line { text-align: left } }
+
+/* demo */
+.demo { display: grid; grid-template-columns: 290px minmax(0, 1fr); border: 1px solid var(--rule); background: var(--panel) }
+@media (max-width: 900px) { .demo { grid-template-columns: 1fr } }
+.controls { padding: 16px; display: flex; flex-direction: column; gap: 18px; border-right: 1px solid var(--rule); min-width: 0 }
+@media (max-width: 900px) { .controls { border-right: 0; border-bottom: 1px solid var(--rule) } }
+fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+legend { padding: 0; margin-bottom: 8px }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--rule); background: var(--paper) }
+.seg button { border: 0; background: transparent; padding: 7px 4px; font-family: var(--f-display); font-stretch: 88%; font-size: .875rem; cursor: pointer; line-height: 1.2 }
+.seg button + button { border-left: 1px solid var(--rule) }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper) }
+.seg button:disabled { color: var(--muted); cursor: not-allowed; text-decoration: line-through }
+.slider { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; font-size: .875rem; align-items: center }
+.slider label { font-family: var(--f-display); font-stretch: 92% }
+.slider output { font-family: var(--f-mono); font-size: .8125rem }
+.slider input { grid-column: 1 / -1; width: 100%; accent-color: var(--ink) }
+.hint { font-size: .8125rem; color: var(--muted); line-height: 1.4 }
+.btn { border: 1px solid var(--ink); background: var(--ink); color: var(--paper); padding: 10px 14px; cursor: pointer;
+  font-family: var(--f-display); font-weight: 700; font-stretch: 95%; letter-spacing: .01em }
+.btn.ghost { background: transparent; color: var(--ink); font-weight: 600; padding: 6px 10px }
+.btn:disabled { opacity: .55; cursor: progress }
+.row { display: flex; flex-wrap: wrap; gap: 8px }
+.osm-box { display: flex; flex-direction: column; gap: 8px }
+.osm-box input, .osm-box select { width: 100%; padding: 6px 8px; border: 1px solid var(--rule); background: var(--paper) }
+
+.stage { display: flex; flex-direction: column; min-width: 0 }
+.mapwrap { position: relative; height: clamp(440px, 64vh, 700px); background: var(--mapbg); touch-action: none }
+@media (max-width: 900px) { .mapwrap { height: 440px } }
+canvas#map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab }
+canvas#map.hover { cursor: pointer }
+.zoom { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; border: 1px solid var(--rule); background: var(--paper) }
+.zoom button { width: 34px; height: 32px; border: 0; background: transparent; cursor: pointer; font-family: var(--f-mono); font-size: 1rem }
+.zoom button + button { border-top: 1px solid var(--rule) }
+.status { position: absolute; left: 10px; top: 10px; padding: 5px 9px; background: var(--paper); border: 1px solid var(--rule);
+  font-family: var(--f-mono); font-size: .75rem; max-width: calc(100% - 70px) }
+.attrib { position: absolute; right: 8px; bottom: 6px; font-size: .6875rem; color: var(--muted); background: color-mix(in srgb, var(--mapbg) 80%, transparent); padding: 1px 5px }
+.layers { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 10px 14px; border-top: 1px solid var(--rule); font-size: .875rem }
+.layers label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-family: var(--f-display); font-stretch: 92% }
+.sw { width: 18px; height: 0; border-top: 3px solid; display: inline-block }
+.sw.dot { width: 9px; height: 9px; border: 0; border-radius: 50% }
+.sw.ring { width: 10px; height: 10px; border: 2px solid; border-radius: 50% }
+.sw.dash { border-top-style: dashed }
+.metrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-top: 1px solid var(--rule) }
+@media (max-width: 1100px) { .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)) } }
+@media (max-width: 480px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+.metric { padding: 10px 14px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); min-width: 0 }
+.metric b { display: block; font-family: var(--f-display); font-weight: 750; font-stretch: 85%; font-size: 1.625rem; line-height: 1.1; font-variant-numeric: tabular-nums }
+.metric span { font-size: .75rem; color: var(--muted); line-height: 1.3; display: block }
+.pbar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 22px; padding: 12px 14px; border-top: 1px solid var(--rule) }
+.pbar legend { grid-column: 1 / -1; float: left; width: 100%; margin-bottom: 0 }
+@media (max-width: 700px) { .pbar { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+.demo-note { font-size: var(--s-1); color: var(--muted); padding-block: 10px 0 }
+
+/* sections */
+section.sec { padding-block: 64px 8px; border-bottom: 1px solid var(--rule) }
+section.sec:last-of-type { border-bottom: 0 }
+.sec-head { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px 40px; margin-bottom: 28px }
+@media (max-width: 760px) { .sec-head { grid-template-columns: 1fr } }
+.steps { list-style: none; padding: 0; margin: 0 0 56px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--ink) }
+@media (max-width: 1000px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+@media (max-width: 560px) { .steps { grid-template-columns: 1fr } }
+.steps li { padding: 16px 20px 20px 0; display: flex; flex-direction: column; gap: 8px; min-width: 0 }
+.steps .n { font-family: var(--f-mono); font-size: .8125rem; color: var(--muted) }
+.steps p { font-size: .9375rem }
+.steps .alg { font-family: var(--f-mono); font-size: .75rem; color: var(--muted) }
+.steps button { align-self: flex-start; margin-top: auto }
+
+.tables { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; margin-bottom: 56px }
+@media (max-width: 1000px) { .tables { grid-template-columns: 1fr } }
+.tbl { min-width: 0; overflow-x: auto }
+table { border-collapse: collapse; width: 100%; font-size: .875rem }
+caption { text-align: left; font-family: var(--f-display); font-weight: 700; font-stretch: 92%; font-size: 1rem; padding-bottom: 8px }
+th, td { text-align: left; padding: 6px 8px 6px 0; border-bottom: 1px solid var(--rule); vertical-align: middle }
+th { font-family: var(--f-mono); font-weight: 500; font-size: .6875rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
+td.v { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap }
+.bar { display: block; height: 5px; background: var(--final); margin-top: 3px; min-width: 2px }
+tr.grp td { font-family: var(--f-display); font-weight: 700; font-stretch: 92%; padding-top: 12px }
+.tblnote { font-size: .8125rem; color: var(--muted); margin-top: 8px }
+
+.dirs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 40px; margin-bottom: 56px }
+@media (max-width: 800px) { .dirs { grid-template-columns: 1fr } }
+.dir { padding-block: 18px 22px; border-top: 1px solid var(--rule); display: flex; flex-direction: column; gap: 8px; min-width: 0 }
+.dir .q { font-size: 1rem }
+.dir .proj { font-size: .9375rem; color: var(--muted) }
+.dir .proj b { color: var(--ink); font-weight: 600 }
+.dir .refs { font-size: .8125rem; color: var(--muted) }
+.dir .fit { font-family: var(--f-mono); font-size: .6875rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
+
+.code-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; margin-bottom: 56px }
+@media (max-width: 800px) { .code-grid { grid-template-columns: 1fr } }
+.links { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column }
+.links li { padding-block: 10px; border-top: 1px solid var(--rule); display: flex; flex-direction: column; gap: 2px }
+.links a { font-family: var(--f-display); font-weight: 700; font-stretch: 92% }
+.links span { font-size: .875rem; color: var(--muted) }
+pre { margin: 0; padding: 14px; background: var(--panel); border: 1px solid var(--rule); overflow-x: auto; font-family: var(--f-mono); font-size: .8125rem; line-height: 1.5 }
+.copyrow { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 8px }
+footer { padding-block: 28px 40px; font-size: .875rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between }
+.sel { user-select: all; font-family: var(--f-mono); color: var(--ink) }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important } }
+.author { border: 1px solid var(--rule); background: var(--panel); padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; min-width: 260px; max-width: 340px }
+.author .aname { font-family: var(--f-display); font-weight: 750; font-stretch: 92%; font-size: 1.375rem; line-height: 1.15 }
+.author .aname a { text-decoration: none }
+.author .aff { color: var(--muted); font-size: .9375rem }
+.author .contact { font-family: var(--f-mono); font-size: .8125rem; display: flex; flex-direction: column; gap: 2px; margin-top: 6px }
+.author .btn { margin-top: 12px; text-align: center; text-decoration: none }
+.author .btn:hover { color: var(--paper); background: var(--verified); border-color: var(--verified) }
+.author .small { font-size: .8125rem; color: var(--muted); margin-top: 6px }
+@media (max-width: 760px) { .author { max-width: none; min-width: 0 } }
+.mark small { font-weight: 500; font-stretch: 100%; color: var(--muted); letter-spacing: .04em; margin-left: 8px; font-size: .8125rem }
+footer a { color: var(--ink) }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="mast">
+    <a class="mark" href="#top" id="top">CROWDSENSING LAB<small>University of Houston</small></a>
+    <nav aria-label="Sections">
+      <a href="#demo">Demo</a><a href="#method">Method</a><a href="#results">Results</a><a href="#directions">Research directions</a><a href="#code">Code &amp; data</a><a href="https://link.springer.com/article/10.1007/s10707-026-00567-1">Paper</a><a href="#contact">Contact</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <div>
+      <p class="label">Crowdsensed mapping after disasters</p>
+      <h1>Proteus</h1>
+      <p class="lede">After a disaster, volunteers walk the area with their phones. Proteus checks every GPS fix against the other volunteers and the pre-disaster map, and keeps only the roads that people could actually travel.</p>
+    </div>
+    <aside class="author" aria-label="Researcher">
+      <p class="label">Research by</p>
+      <p class="aname"><a href="https://raunaksarbajna.com/">Raunak Sarbajna</a></p>
+      <p class="aff">Department of Computer Science, University of Houston</p>
+      <p class="contact"><a href="mailto:rsarbajna@uh.edu">rsarbajna@uh.edu</a><a href="https://raunaksarbajna.com/">raunaksarbajna.com</a></p>
+      <a class="btn" href="https://link.springer.com/article/10.1007/s10707-026-00567-1">Read the paper in GeoInformatica</a>
+      <p class="small">Sarbajna, Eick &amp; Ni. <i>Proteus: A system for combining paths collected using crowdsensing.</i> GeoInformatica 30:7, 2026.</p>
+    </aside>
+  </div>
+
+  <section id="demo" aria-label="Live demo">
+    <div class="demo">
+      <form class="controls" id="controls" onsubmit="return false">
+        <fieldset>
+          <legend class="label">Area</legend>
+          <div class="seg" role="group" aria-label="Area">
+            <button type="button" id="area-grid" aria-pressed="true">Street grid</button>
+            <button type="button" id="area-uh" aria-pressed="false">UH campus</button>
+            <button type="button" id="area-osm" aria-pressed="false">Any area</button>
+          </div>
+          <div class="osm-box" id="osm-box" hidden>
+            <div class="slider"><label for="osm-center">Centre (lat, lon)</label><input id="osm-center" value="29.7604, -95.3698" style="grid-column:1/-1"></div>
+            <div class="row">
+              <select id="osm-mode" aria-label="Network type" style="flex:1"><option value="drive">Roads (drive)</option><option value="walk">Paths (walk)</option></select>
+              <select id="osm-size" aria-label="Area size" style="flex:1"><option value="400">800 m square</option><option value="600" selected>1.2 km square</option><option value="800">1.6 km square</option></select>
+            </div>
+            <button type="button" class="btn ghost" id="osm-load">Load from OpenStreetMap</button>
+          </div>
+          <p class="hint" id="area-hint">A downtown-style street grid, rotated like central Houston.</p>
+        </fieldset>
+
+        <fieldset>
+          <legend class="label">The disaster</legend>
+          <div class="slider"><label for="damage">Roads destroyed</label><output id="damage-o" for="damage">10%</output>
+            <input type="range" id="damage" min="0" max="35" step="1" value="10"></div>
+          <div class="row"><button type="button" class="btn ghost" id="reshuffle">New damage pattern</button></div>
+          <p class="hint">Click a road on the map to destroy or restore it.</p>
+        </fieldset>
+
+        <fieldset>
+          <legend class="label">Volunteers</legend>
+          <div class="slider"><label for="agents">Volunteers</label><output id="agents-o" for="agents">16</output>
+            <input type="range" id="agents" min="4" max="40" step="1" value="16"></div>
+          <div class="slider"><label for="steps">Time walking (blocks each)</label><output id="steps-o" for="steps">300</output>
+            <input type="range" id="steps" min="50" max="800" step="10" value="300"></div>
+          <div class="slider"><label for="sigma">GPS noise σ</label><output id="sigma-o" for="sigma">3 m</output>
+            <input type="range" id="sigma" min="0.5" max="10" step="0.5" value="3"></div>
+          <button type="button" class="btn" id="run">Send volunteers</button>
+        </fieldset>
+
+      </form>
+
+      <div class="stage">
+        <div class="mapwrap" id="mapwrap">
+          <canvas id="map" aria-label="Map of the road network, volunteer traces and the reconstructed map" role="img"></canvas>
+          <div class="status" id="status" aria-live="polite">Loading…</div>
+          <div class="zoom"><button type="button" id="zin" aria-label="Zoom in">+</button><button type="button" id="zout" aria-label="Zoom out">−</button><button type="button" id="zfit" aria-label="Fit map">⤢</button></div>
+          <div class="attrib" id="attrib"></div>
+        </div>
+        <fieldset class="pbar" form="controls">
+          <legend class="label">Proteus settings · changes re-run Proteus on the same traces</legend>
+          <div class="slider"><label for="theta">Distance threshold θ</label><output id="theta-o" for="theta">10 m</output>
+            <input type="range" id="theta" min="4" max="25" step="1" value="10"></div>
+          <div class="slider"><label for="k">Other volunteers needed (n<sub>p</sub> ≥)</label><output id="k-o" for="k">3</output>
+            <input type="range" id="k" min="1" max="6" step="1" value="3"></div>
+          <div class="slider"><label for="omega">Angle tolerance ω</label><output id="omega-o" for="omega">15°</output>
+            <input type="range" id="omega" min="3" max="40" step="1" value="15"></div>
+          <div class="slider"><label for="l">Sub-edge length l</label><output id="l-o" for="l">20 m</output>
+            <input type="range" id="l" min="10" max="50" step="1" value="20"></div>
+          
+        </fieldset>
+        <div class="layers" id="layers" aria-label="Map layers">
+          <label><input type="checkbox" id="L-map" checked> <span class="sw" style="border-color:var(--road)"></span>Pre-disaster map</label>
+          <label><input type="checkbox" id="L-damage" checked> <span class="sw dash" style="border-color:var(--destroyed)"></span>Destroyed roads</label>
+          <label><input type="checkbox" id="L-traces" checked> <span class="sw dot" style="background:var(--trace)"></span>GPS fixes</label>
+          <label><input type="checkbox" id="L-verified" checked> <span class="sw dot" style="background:var(--verified)"></span>Verified fixes</label>
+          <label><input type="checkbox" id="L-junctions" checked> <span class="sw ring" style="border-color:var(--junction)"></span>Detected intersections</label>
+          <label><input type="checkbox" id="L-final" checked> <span class="sw" style="border-color:var(--final)"></span>Proteus map</label>
+        </div>
+        <div class="metrics" id="metrics">
+          <div class="metric"><b id="m-cov">–</b><span>of junctions reached by ≥ 3 volunteers</span></div>
+          <div class="metric"><b id="m-ver">–</b><span>of GPS fixes verified</span></div>
+          <div class="metric"><b id="m-rec">–</b><span>of passable roads recovered</span></div>
+          <div class="metric"><b id="m-pre">–</b><span>of the Proteus map is passable</span></div>
+          <div class="metric"><b id="m-del">–</b><span>of destroyed roads removed</span></div>
+          <div class="metric"><b id="m-jn">–</b><span>intersections detected</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="demo-note" id="demo-note">Everything runs in your browser: a JavaScript port of the reference implementation simulates the volunteers, then runs point-wise verification, intersection detection and map combination.</p>
+  </section>
+
+  <section class="sec" id="method">
+    <div class="sec-head">
+      <p class="label">Method</p>
+      <div class="prose"><h2>Four stages from noisy traces to a usable map</h2>
+        <p style="margin-top:12px">Crowdsensed data is inconsistent: phones are noisy, volunteers wander, and two roads can look connected when they cross at different levels. Proteus never trusts a single trace. Each stage below can be shown on the map above.</p></div>
+    </div>
+    <ol class="steps">
+      <li><span class="n">1 · Collect</span><h3>Send volunteers out with rules</h3>
+        <p>The area is divided into cells and volunteers are spread across them. They stay inside their box, keep to the centre of the road, and circle every intersection before choosing an exit.</p>
+        <span class="alg">Algorithm 1 · movement rules 1–4</span>
+        <button type="button" class="btn ghost" data-show="traces">Show GPS fixes</button></li>
+      <li><span class="n">2 · Verify</span><h3>Keep only confirmed points</h3>
+        <p>A GPS fix counts only if at least three other volunteers recorded a fix within θ of it, and it lies within θ of a pre-disaster road. Runs of verified fixes become verified edges.</p>
+        <span class="alg">Algorithm 2</span>
+        <button type="button" class="btn ghost" data-show="verified">Show verified fixes</button></li>
+      <li><span class="n">3 · Connect</span><h3>Find the real intersections</h3>
+        <p>Circling an intersection leaves a small loop in the combined traces. Proteus looks for those loops and collapses each into one junction, so crossings without a loop, like a footbridge over a road, stay separate.</p>
+        <span class="alg">Algorithms 3–4</span>
+        <button type="button" class="btn ghost" data-show="junctions">Show intersections</button></li>
+      <li><span class="n">4 · Combine</span><h3>Confirm the pre-disaster map piece by piece</h3>
+        <p>The old map is cut into short sub-edges. A sub-edge stays only if at least two verified edges agree with it: aligned within ω and overlapping for most of their length.</p>
+        <span class="alg">Algorithms 5–6</span>
+        <button type="button" class="btn ghost" data-show="final">Show the Proteus map</button></li>
+    </ol>
+  </section>
+
+  <section class="sec" id="results">
+    <div class="sec-head">
+      <p class="label">Results</p>
+      <div class="prose"><h2>Tested on two very different parts of Houston</h2>
+        <p style="margin-top:12px">The paper evaluates Proteus with an agent-based simulation on Downtown Houston, a regular street grid, and the University of Houston campus, a network of curving footpaths. The “x-edge” models need x volunteers to confirm each edge. Three confirmations are the practical minimum; two leave large gaps.</p></div>
+    </div>
+    <div class="tables" id="tables"></div>
+  </section>
+
+  <section class="sec" id="directions">
+    <div class="sec-head">
+      <p class="label">Research directions</p>
+      <div class="prose"><h2>Open problems for undergraduate researchers</h2>
+        <p style="margin-top:12px">Proteus has so far been tested in simulation. These directions move it toward real deployments, and each one starts from code that already exists in the repository. Students interested in joining the lab can write to <a href="mailto:rsarbajna@uh.edu">rsarbajna@uh.edu</a>.</p></div>
+    </div>
+    <div class="dirs" id="dirs"></div>
+  </section>
+
+  <section class="sec" id="code">
+    <div class="sec-head">
+      <p class="label">Code &amp; data</p>
+      <div class="prose"><h2>Reference implementation and published data</h2>
+        <p style="margin-top:12px">The Python package implements Algorithms 1–6, the volunteer simulator and every experiment in the paper. It runs on real GPS traces as well as simulated ones.</p></div>
+    </div>
+    <div class="code-grid">
+      <ul class="links">
+        <li><a href="https://github.com/RaunakDune/proteus-implementation">proteus-implementation</a><span>Python package, command-line tool, tests and reproduction scripts. MIT licence.</span></li>
+        <li><a href="https://github.com/UH-DAIS/ProteusData">ProteusData</a><span>Raw results of the parameter study and the generated maps from the paper.</span></li>
+        <li><a href="https://link.springer.com/article/10.1007/s10707-026-00567-1">The paper</a><span>GeoInformatica 30:7 (2026), doi:10.1007/s10707-026-00567-1</span></li>
+      </ul>
+      <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+        <div><div class="copyrow"><span class="label">Run it</span><button type="button" class="btn ghost" data-copy="cmd">Copy</button></div>
+<pre id="cmd">git clone https://github.com/RaunakDune/proteus-implementation
+cd proteus-implementation &amp;&amp; pip install -e ".[analysis]"
+proteus simulate --grid 6,6,100 --agents 24 --steps 1000 --out sim/
+proteus run --map premap.csv --traces traces.csv --out out/</pre></div>
+        <div><div class="copyrow"><span class="label">Cite</span><button type="button" class="btn ghost" data-copy="bib">Copy BibTeX</button></div>
+<pre id="bib">@article{sarbajna2026proteus,
+  title   = {Proteus: A system for combining paths collected using crowdsensing},
+  author  = {Sarbajna, Raunak and Eick, Christoph F. and Ni, Jianyuan},
+  journal = {GeoInformatica},
+  volume  = {30},
+  eid     = {7},
+  year    = {2026},
+  doi     = {10.1007/s10707-026-00567-1}
+}</pre></div>
+      </div>
+    </div>
+  </section>
+
+  <footer id="contact">
+    <span>Crowdsensing Lab · <a href="https://raunaksarbajna.com/">Raunak Sarbajna</a>, University of Houston · <a href="mailto:rsarbajna@uh.edu">rsarbajna@uh.edu</a> · <a href="https://link.springer.com/article/10.1007/s10707-026-00567-1">Paper</a> · <a href="https://github.com/RaunakDune/proteus-implementation">Code</a></span>
+    <span id="foot-attrib">Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors. UH campus network from ProteusData.</span>
+  </footer>
+</div>
+
+<script src="js/proteus-engine.js"></script>
+<script src="js/uh-campus.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
