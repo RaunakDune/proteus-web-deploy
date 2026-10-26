@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Proteus · Crowdsensing Lab</title>
+<title>Proteus | Crowdsensing Lab</title>
 <link rel="canonical" href="https://crowdsensinglab.org/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<meta property="og:title" content="Proteus · Crowdsensing Lab">
+<meta property="og:title" content="Proteus | Crowdsensing Lab">
 <meta property="og:description" content="Combining GPS traces collected by volunteers after a disaster into a verified map of passable roads. Live demo, paper, code and data.">
 <meta property="og:url" content="https://crowdsensinglab.org/">
 <meta property="og:type" content="website">
@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
 <style>
-/* Crowdsensing Lab. Layout: a survey-sheet page — compact masthead, the live map as the hero, then
+/* Crowdsensing Lab. Layout: a survey-sheet page, compact masthead, the live map as the hero, then
    ruled sections that read like a field report. Colours follow map-legend roles. */
 :root {
   --paper: #f1f2ec; --panel: #e6e9e1; --ink: #1a2320; --muted: #5a6761; --rule: #c6cdc4;
@@ -250,7 +250,7 @@ footer a { color: var(--ink) }
           <div class="attrib" id="attrib"></div>
         </div>
         <fieldset class="pbar" form="controls">
-          <legend class="label">Proteus settings · changes re-run Proteus on the same traces</legend>
+          <legend class="label">Proteus settings | changes re-run Proteus on the same traces</legend>
           <div class="slider"><label for="theta">Distance threshold θ</label><output id="theta-o" for="theta">10 m</output>
             <input type="range" id="theta" min="4" max="25" step="1" value="10"></div>
           <div class="slider"><label for="k">Other volunteers needed (n<sub>p</sub> ≥)</label><output id="k-o" for="k">3</output>
@@ -289,19 +289,19 @@ footer a { color: var(--ink) }
         <p style="margin-top:12px">Crowdsensed data is inconsistent: phones are noisy, volunteers wander, and two roads can look connected when they cross at different levels. Proteus never trusts a single trace. Each stage below can be shown on the map above.</p></div>
     </div>
     <ol class="steps">
-      <li><span class="n">1 · Collect</span><h3>Send volunteers out with rules</h3>
+      <li><span class="n">1 | Collect</span><h3>Send volunteers out with rules</h3>
         <p>The area is divided into cells and volunteers are spread across them. They stay inside their box, keep to the centre of the road, and circle every intersection before choosing an exit.</p>
-        <span class="alg">Algorithm 1 · movement rules 1–4</span>
+        <span class="alg">Algorithm 1 | movement rules 1–4</span>
         <button type="button" class="btn ghost" data-show="traces">Show GPS fixes</button></li>
-      <li><span class="n">2 · Verify</span><h3>Keep only confirmed points</h3>
+      <li><span class="n">2 | Verify</span><h3>Keep only confirmed points</h3>
         <p>A GPS fix counts only if at least three other volunteers recorded a fix within θ of it, and it lies within θ of a pre-disaster road. Runs of verified fixes become verified edges.</p>
         <span class="alg">Algorithm 2</span>
         <button type="button" class="btn ghost" data-show="verified">Show verified fixes</button></li>
-      <li><span class="n">3 · Connect</span><h3>Find the real intersections</h3>
+      <li><span class="n">3 | Connect</span><h3>Find the real intersections</h3>
         <p>Circling an intersection leaves a small loop in the combined traces. Proteus looks for those loops and collapses each into one junction, so crossings without a loop, like a footbridge over a road, stay separate.</p>
         <span class="alg">Algorithms 3–4</span>
         <button type="button" class="btn ghost" data-show="junctions">Show intersections</button></li>
-      <li><span class="n">4 · Combine</span><h3>Confirm the pre-disaster map piece by piece</h3>
+      <li><span class="n">4 | Combine</span><h3>Confirm the pre-disaster map piece by piece</h3>
         <p>The old map is cut into short sub-edges. A sub-edge stays only if at least two verified edges agree with it: aligned within ω and overlapping for most of their length.</p>
         <span class="alg">Algorithms 5–6</span>
         <button type="button" class="btn ghost" data-show="final">Show the Proteus map</button></li>
@@ -360,13 +360,13 @@ proteus run --map premap.csv --traces traces.csv --out out/</pre></div>
   </section>
 
   <footer id="contact">
-    <span>Crowdsensing Lab · <a href="https://raunaksarbajna.com/">Raunak Sarbajna</a>, University of Houston · <a href="mailto:rsarbajna@uh.edu">rsarbajna@uh.edu</a> · <a href="https://link.springer.com/article/10.1007/s10707-026-00567-1">Paper</a> · <a href="https://github.com/RaunakDune/proteus-implementation">Code</a></span>
+    <span>Crowdsensing Lab | <a href="https://raunaksarbajna.com/">Raunak Sarbajna</a>, University of Houston | <a href="mailto:rsarbajna@uh.edu">rsarbajna@uh.edu</a> | <a href="https://link.springer.com/article/10.1007/s10707-026-00567-1">Paper</a> | <a href="https://github.com/RaunakDune/proteus-implementation">Code</a></span>
     <span id="foot-attrib">Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, streets via <a href="https://openfreemap.org/">OpenFreeMap</a> and <a href="https://openmaptiles.org/">OpenMapTiles</a>. UH campus network from ProteusData.</span>
   </footer>
 </div>
 
-<script src="js/proteus-engine.js?v=2026-10-25b"></script>
-<script src="js/uh-campus.js?v=2026-10-25b"></script>
-<script src="js/app.js?v=2026-10-25b"></script>
+<script src="js/proteus-engine.js?v=2026-10-25c"></script>
+<script src="js/uh-campus.js?v=2026-10-25c"></script>
+<script src="js/app.js?v=2026-10-25c"></script>
 </body>
 </html>

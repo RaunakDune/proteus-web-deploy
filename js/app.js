@@ -26,7 +26,7 @@ function tableHTML() {
 }
 const DIRS = [
   ["Field trials with real phones", "Proteus has only seen simulated GPS noise. Real smartphone error is heavy-tailed: about 7 m standard deviation overall, with 95th-percentile errors near 18 m in suburban driving.",
-   "Collect traces on the UH campus, fit an empirical error model, and re-tune θ and the n<sub>p</sub> ≥ 3 rule.", "Good first project · needs IRB approval",
+   "Collect traces on the UH campus, fit an empirical error model, and re-tune θ and the n<sub>p</sub> ≥ 3 rule.", "Good first project | needs IRB approval",
    [["Hu, Yi & Bisnath, Sensors 2023", "https://pmc.ncbi.nlm.nih.gov/articles/PMC9921678"]]],
   ["Learned map inference as baseline and partner", "Diffusion models now build road graphs straight from raw trajectories and cope better with sparse data and flyovers, the overlap case Proteus handles with circuits.",
    "Benchmark Proteus against a learned model on the same traces, then let the model propose roads and Proteus confirm them.", "Machine learning",
@@ -35,7 +35,7 @@ const DIRS = [
    "Count an imagery “passable” label as one of the two agreeing edges Algorithm 6 needs, and use imagery to decide where volunteers go first.", "Computer vision",
    [["Manzini et al., 2025", "https://arxiv.org/abs/2512.12128v1"], ["Gengec et al., 2024", "https://research.itu.edu.tr/en/publications/ai-powered-road-network-prediction-with-fused-low-resolution-sate/"]]],
   ["Adaptive volunteer tasking", "Algorithm 1 assigns volunteers once, and coverage limits how much of the map can be verified. Multi-agent reinforcement learning has raised task completion in emergency crowdsensing by about 18%.",
-   "Re-route volunteers toward unverified roads during collection and compare coverage time with Table 5.", "Reinforcement learning · simulation",
+   "Re-route volunteers toward unverified roads during collection and compare coverage time with Table 5.", "Reinforcement learning | simulation",
    [["Lu et al., 2025", "https://arxiv.org/abs/2505.06997v1"], ["Sultimov et al., AAAI 2026", "https://ojs.aaai.org/index.php/AAAI/article/view/42384"]]],
   ["Trust, attacks and privacy", "Proteus treats every volunteer as honest and collects detailed location histories during a crisis. Reputation-based truth discovery and metric differential privacy address both gaps.",
    "Inject spoofed or colluding traces, weight n<sub>p</sub> by reputation, and measure the accuracy cost of privacy noise.", "Security",
@@ -43,7 +43,7 @@ const DIRS = [
 ];
 function dirsHTML() {
   $("dirs").innerHTML = DIRS.map(([t, q, p, fit, refs]) => `<article class="dir"><span class="fit">${fit}</span><h3>${t}</h3><p class="q">${q}</p>
-    <p class="proj"><b>Starter project.</b> ${p}</p><p class="refs">${refs.map(([n, u]) => `<a href="${u}">${n}</a>`).join(" · ")}</p></article>`).join("");
+    <p class="proj"><b>Starter project.</b> ${p}</p><p class="refs">${refs.map(([n, u]) => `<a href="${u}">${n}</a>`).join(" | ")}</p></article>`).join("");
 }
 tableHTML(); dirsHTML();
 
@@ -82,7 +82,7 @@ function selectArea(a) {
   for (const k of ["grid", "uh", "osm"]) $("area-" + k).setAttribute("aria-pressed", String(k === a));
   $("osm-box").hidden = a !== "osm";
   if (a === "grid") loadNetwork(P.syntheticGrid(), "A downtown-style street grid, rotated like central Houston. Blocks are 110 m long.", "Synthetic network");
-  if (a === "uh") loadNetwork(P.fromCompact(UH_DATA), "Footpaths of the University of Houston campus: the largest connected part of the map in ProteusData.", "UH campus: ProteusData · map tiles © OpenStreetMap contributors", true);
+  if (a === "uh") loadNetwork(P.fromCompact(UH_DATA), "Footpaths of the University of Houston campus: the largest connected part of the map in ProteusData.", "UH campus: ProteusData | map tiles © OpenStreetMap contributors", true);
   if (a === "osm") { $("area-hint").textContent = "Enter a centre point and load its streets or footpaths straight from OpenStreetMap."; }
 }
 $("area-grid").onclick = () => selectArea("grid");
@@ -102,7 +102,7 @@ async function loadOSM() {
     catch (vtErr) { net = P.fromOverpass(await overpass(P.overpassQuery(s, w, n, e, mode))); }
     if (net.edges.length < 10) throw new Error("too few streets in this area");
     S.busy = false;
-    loadNetwork(net, `${fmt(Math.round(net.length / 100) / 10)} km of streets around ${lat.toFixed(4)}, ${lon.toFixed(4)}. Real areas are large: add volunteers and walking time to cover more of them.`, "Streets: OpenFreeMap / OpenMapTiles · data and map tiles © OpenStreetMap contributors", true);
+    loadNetwork(net, `${fmt(Math.round(net.length / 100) / 10)} km of streets around ${lat.toFixed(4)}, ${lon.toFixed(4)}. Real areas are large: add volunteers and walking time to cover more of them.`, "Streets: OpenFreeMap / OpenMapTiles | data and map tiles © OpenStreetMap contributors", true);
   } catch (err) { setStatus("Couldn’t load streets: " + err.message + ". Wait a minute and try again, or pick a smaller area."); }
   finally { S.busy = false; $("osm-load").disabled = false; }
 }
@@ -175,7 +175,7 @@ function runProteus() {
   $("m-rec").textContent = pct(m.recall); $("m-pre").textContent = pct(m.precision);
   $("m-del").textContent = S.destroyed.size ? pct(m.destroyedRemoved) : "–"; $("m-jn").textContent = fmt(m.junctions);
   const ms = Math.round(m.ms.verify + m.ms.intersections + m.ms.combine);
-  setStatus(`${fmt(m.points)} GPS fixes from ${val("agents")} volunteers · Proteus ran in ${fmt(ms)} ms`);
+  setStatus(`${fmt(m.points)} GPS fixes from ${val("agents")} volunteers | Proteus ran in ${fmt(ms)} ms`);
   draw();
 }
 $("run").onclick = () => { if (!S.busy) runAll(true); };
