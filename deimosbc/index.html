@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DEIMOSBC | Crowdsensing Lab</title>
+<link rel="canonical" href="https://crowdsensinglab.org/deimosbc/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="DEIMOSBC | Crowdsensing Lab">
+<meta property="og:description" content="A blockchain that lets volunteers map a disaster area with their phones, without a central authority. Live demo, paper, code.">
+<meta property="og:url" content="https://crowdsensinglab.org/deimosbc/">
+<meta property="og:type" content="website">
+<meta name="description" content="DEIMOSBC turns GPS traces from volunteers' phones into a map of passable streets, verified and agreed on by a blockchain run on site after a disaster.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Crowdsensing Lab (shared with the Proteus page). Layout: a survey-sheet page, compact masthead, the live map as the hero, then
+   ruled sections that read like a field report. Colours follow map-legend roles. */
+:root {
+  --paper: #f1f2ec; --panel: #e6e9e1; --ink: #1a2320; --muted: #5a6761; --rule: #c6cdc4;
+  --mapbg: #f8f8f4; --road: #aab3ac; --trace: #9fb0c2; --verified: #2c66d6;
+  --final: #0b7a52; --destroyed: #c63a2e; --junction: #d48a00; --agent: #1a2320;
+  --focus: #2c66d6; color-scheme: light;
+  --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --s-1: .8125rem; --s0: 1rem; --s1: 1.1875rem; --s2: 1.5rem; --s3: 2.25rem; --s4: clamp(2.75rem, 7vw, 4.75rem);
+}
+
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: var(--s0); line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1240px; margin-inline: auto }
+a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px }
+a:hover { color: var(--verified) }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -.01em }
+h2 { font-size: var(--s3); font-weight: 750; font-stretch: 85%; line-height: 1.05 }
+h3 { font-size: var(--s1); font-weight: 700; font-stretch: 95% }
+p { margin: 0 }
+.label { font-family: var(--f-mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.prose { max-width: 66ch }
+button, input, select { font: inherit; color: inherit }
+.num { font-variant-numeric: tabular-nums }
+
+/* masthead */
+.mast { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; justify-content: space-between;
+  padding-block: 18px 14px; border-bottom: 1px solid var(--rule) }
+.mark { font-family: var(--f-display); font-weight: 800; font-stretch: 112%; font-size: 1.125rem; letter-spacing: .02em; text-decoration: none }
+.mast nav { display: flex; flex-wrap: wrap; gap: 4px 18px; font-family: var(--f-display); font-stretch: 90%; font-size: .9375rem }
+.mast nav a { text-decoration: none; color: var(--muted) }
+.mast nav a:hover { color: var(--ink) }
+
+/* hero */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px 40px; align-items: end; padding-block: 36px 22px }
+.hero h1 { font-size: var(--s4); font-weight: 800; font-stretch: 78%; line-height: .92; letter-spacing: -.02em }
+.hero .lede { font-size: var(--s1); max-width: 56ch; margin-top: 14px }
+.cite-line { font-size: var(--s-1); color: var(--muted); max-width: 40ch; text-align: right }
+.cite-line a { color: var(--ink) }
+@media (max-width: 760px) { .hero { grid-template-columns: 1fr } .cite-line { text-align: left } }
+
+/* demo */
+.demo { display: grid; grid-template-columns: 290px minmax(0, 1fr); border: 1px solid var(--rule); background: var(--panel) }
+@media (max-width: 900px) { .demo { grid-template-columns: 1fr } }
+.controls { padding: 16px; display: flex; flex-direction: column; gap: 18px; border-right: 1px solid var(--rule); min-width: 0 }
+@media (max-width: 900px) { .controls { border-right: 0; border-bottom: 1px solid var(--rule) } }
+fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+legend { padding: 0; margin-bottom: 8px }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--rule); background: var(--paper) }
+.seg button { border: 0; background: transparent; padding: 7px 4px; font-family: var(--f-display); font-stretch: 88%; font-size: .875rem; cursor: pointer; line-height: 1.2 }
+.seg button + button { border-left: 1px solid var(--rule) }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper) }
+.seg button:disabled { color: var(--muted); cursor: not-allowed; text-decoration: line-through }
+.slider { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; font-size: .875rem; align-items: center }
+.slider label { font-family: var(--f-display); font-stretch: 92% }
+.slider output { font-family: var(--f-mono); font-size: .8125rem }
+.slider input { grid-column: 1 / -1; width: 100%; accent-color: var(--ink) }
+.hint { font-size: .8125rem; color: var(--muted); line-height: 1.4 }
+.btn { border: 1px solid var(--ink); background: var(--ink); color: var(--paper); padding: 10px 14px; cursor: pointer;
+  font-family: var(--f-display); font-weight: 700; font-stretch: 95%; letter-spacing: .01em }
+.btn.ghost { background: transparent; color: var(--ink); font-weight: 600; padding: 6px 10px }
+.btn:disabled { opacity: .55; cursor: progress }
+.row { display: flex; flex-wrap: wrap; gap: 8px }
+.osm-box { display: flex; flex-direction: column; gap: 8px }
+.osm-box input, .osm-box select { width: 100%; padding: 6px 8px; border: 1px solid var(--rule); background: var(--paper) }
+
+.stage { display: flex; flex-direction: column; min-width: 0 }
+.mapwrap { position: relative; height: clamp(440px, 64vh, 700px); background: var(--mapbg); touch-action: none }
+@media (max-width: 900px) { .mapwrap { height: 440px } }
+canvas#map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab }
+canvas#map.hover { cursor: pointer }
+.zoom { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; border: 1px solid var(--rule); background: var(--paper) }
+.zoom button { width: 34px; height: 32px; border: 0; background: transparent; cursor: pointer; font-family: var(--f-mono); font-size: 1rem }
+.zoom button + button { border-top: 1px solid var(--rule) }
+.status { position: absolute; left: 10px; top: 10px; padding: 5px 9px; background: var(--paper); border: 1px solid var(--rule);
+  font-family: var(--f-mono); font-size: .75rem; max-width: calc(100% - 70px) }
+.attrib { position: absolute; right: 8px; bottom: 6px; font-size: .6875rem; color: var(--muted); background: color-mix(in srgb, var(--mapbg) 80%, transparent); padding: 1px 5px }
+.layers { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 10px 14px; border-top: 1px solid var(--rule); font-size: .875rem }
+.layers label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-family: var(--f-display); font-stretch: 92% }
+.sw { width: 18px; height: 0; border-top: 3px solid; display: inline-block }
+.sw.dot { width: 9px; height: 9px; border: 0; border-radius: 50% }
+.sw.ring { width: 10px; height: 10px; border: 2px solid; border-radius: 50% }
+.sw.dash { border-top-style: dashed }
+.metrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-top: 1px solid var(--rule) }
+@media (max-width: 1100px) { .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)) } }
+@media (max-width: 480px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+.metric { padding: 10px 14px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); min-width: 0 }
+.metric b { display: block; font-family: var(--f-display); font-weight: 750; font-stretch: 85%; font-size: 1.625rem; line-height: 1.1; font-variant-numeric: tabular-nums }
+.metric span { font-size: .75rem; color: var(--muted); line-height: 1.3; display: block }
+.pbar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 22px; padding: 12px 14px; border-top: 1px solid var(--rule) }
+.pbar legend { grid-column: 1 / -1; float: left; width: 100%; margin-bottom: 0 }
+@media (max-width: 700px) { .pbar { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+.demo-note { font-size: var(--s-1); color: var(--muted); padding-block: 10px 0 }
+
+/* sections */
+section.sec { padding-block: 64px 8px; border-bottom: 1px solid var(--rule) }
+section.sec:last-of-type { border-bottom: 0 }
+.sec-head { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px 40px; margin-bottom: 28px }
+@media (max-width: 760px) { .sec-head { grid-template-columns: 1fr } }
+.steps { list-style: none; padding: 0; margin: 0 0 56px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--ink) }
+@media (max-width: 1000px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+@media (max-width: 560px) { .steps { grid-template-columns: 1fr } }
+.steps li { padding: 16px 20px 20px 0; display: flex; flex-direction: column; gap: 8px; min-width: 0 }
+.steps .n { font-family: var(--f-mono); font-size: .8125rem; color: var(--muted) }
+.steps p { font-size: .9375rem }
+.steps .alg { font-family: var(--f-mono); font-size: .75rem; color: var(--muted) }
+.steps button { align-self: flex-start; margin-top: auto }
+
+.tables { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; margin-bottom: 56px }
+@media (max-width: 1000px) { .tables { grid-template-columns: 1fr } }
+.tbl { min-width: 0; overflow-x: auto }
+table { border-collapse: collapse; width: 100%; font-size: .875rem }
+caption { text-align: left; font-family: var(--f-display); font-weight: 700; font-stretch: 92%; font-size: 1rem; padding-bottom: 8px }
+th, td { text-align: left; padding: 6px 8px 6px 0; border-bottom: 1px solid var(--rule); vertical-align: middle }
+th { font-family: var(--f-mono); font-weight: 500; font-size: .6875rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
+td.v { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap }
+.bar { display: block; height: 5px; background: var(--final); margin-top: 3px; min-width: 2px }
+tr.grp td { font-family: var(--f-display); font-weight: 700; font-stretch: 92%; padding-top: 12px }
+.tblnote { font-size: .8125rem; color: var(--muted); margin-top: 8px }
+
+.dirs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 40px; margin-bottom: 56px }
+@media (max-width: 800px) { .dirs { grid-template-columns: 1fr } }
+.dir { padding-block: 18px 22px; border-top: 1px solid var(--rule); display: flex; flex-direction: column; gap: 8px; min-width: 0 }
+.dir .q { font-size: 1rem }
+.dir .proj { font-size: .9375rem; color: var(--muted) }
+.dir .proj b { color: var(--ink); font-weight: 600 }
+.dir .refs { font-size: .8125rem; color: var(--muted) }
+.dir .fit { font-family: var(--f-mono); font-size: .6875rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
+
+.code-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; margin-bottom: 56px }
+@media (max-width: 800px) { .code-grid { grid-template-columns: 1fr } }
+.links { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column }
+.links li { padding-block: 10px; border-top: 1px solid var(--rule); display: flex; flex-direction: column; gap: 2px }
+.links a { font-family: var(--f-display); font-weight: 700; font-stretch: 92% }
+.links span { font-size: .875rem; color: var(--muted) }
+pre { margin: 0; padding: 14px; background: var(--panel); border: 1px solid var(--rule); overflow-x: auto; font-family: var(--f-mono); font-size: .8125rem; line-height: 1.5 }
+.copyrow { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 8px }
+footer { padding-block: 28px 40px; font-size: .875rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between }
+.sel { user-select: all; font-family: var(--f-mono); color: var(--ink) }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important } }
+.author { border: 1px solid var(--rule); background: var(--panel); padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; min-width: 260px; max-width: 340px }
+.author .aname { font-family: var(--f-display); font-weight: 750; font-stretch: 92%; font-size: 1.375rem; line-height: 1.15 }
+.author .aname a { text-decoration: none }
+.author .aff { color: var(--muted); font-size: .9375rem }
+.author .role { color: var(--ink); font-weight: 600 }
+.author .contact { font-family: var(--f-mono); font-size: .8125rem; display: flex; flex-direction: column; gap: 2px; margin-top: 6px }
+.author .btn { margin-top: 12px; text-align: center; text-decoration: none }
+.author .btn:hover { color: var(--paper); background: var(--verified); border-color: var(--verified) }
+.author .small { font-size: .8125rem; color: var(--muted); margin-top: 6px }
+@media (max-width: 760px) { .author { max-width: none; min-width: 0 } }
+.mark small { font-weight: 500; font-stretch: 100%; color: var(--muted); letter-spacing: .04em; margin-left: 8px; font-size: .8125rem }
+footer a { color: var(--ink) }
+/* DEIMOSBC additions */
+:root { --chain: #2c66d6; --hazard: #d48a00; --proc: #1a2320; --bad: #c63a2e }
+.controls { gap: 16px }
+.seg.two { grid-template-columns: repeat(2, 1fr) }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: .875rem; font-family: var(--f-display); font-stretch: 92%; cursor: pointer }
+.check input { margin-top: 3px; accent-color: var(--ink) }
+.scrub { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--rule) }
+.scrub input { width: 100%; accent-color: var(--ink) }
+.scrub output { font-family: var(--f-mono); font-size: .8125rem; min-width: 11ch; text-align: right }
+.scrub .btn { padding: 4px 10px; min-width: 64px }
+.sw.tri { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid var(--proc); border-top: 0 }
+.sw.x { width: 10px; height: 10px; border: 0; position: relative }
+.sw.x::before, .sw.x::after { content: ""; position: absolute; left: 4px; top: -1px; width: 2px; height: 12px; background: var(--hazard); transform: rotate(45deg) }
+.sw.x::after { transform: rotate(-45deg) }
+.metric b.bad { color: var(--bad) }
+.ledger { border-top: 1px solid var(--rule); padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+.ledger-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between }
+.ledger-head .label { color: var(--ink) }
+.ledger-head .row { gap: 6px }
+.chainmsg { font-family: var(--f-mono); font-size: .75rem; color: var(--muted); min-height: 1.2em }
+.chainmsg.ok { color: var(--final) } .chainmsg.err { color: var(--bad) }
+.blocks { max-height: 240px; overflow: auto; border: 1px solid var(--rule); background: var(--paper); font-family: var(--f-mono); font-size: .75rem }
+.blk { border-bottom: 1px solid var(--rule) }
+.blk:last-child { border-bottom: 0 }
+.blk summary { display: grid; grid-template-columns: 6ch 6ch 4ch minmax(0, 1fr) 10ch; gap: 10px; padding: 5px 10px; cursor: pointer; list-style: none; white-space: nowrap }
+.blk summary::-webkit-details-marker { display: none }
+.blk summary span:nth-child(4) { overflow: hidden; text-overflow: ellipsis; color: var(--muted) }
+.blk summary .h { color: var(--muted) }
+.blk.tampered summary { background: color-mix(in srgb, var(--bad) 12%, transparent) }
+.blk ul { margin: 0; padding: 4px 10px 8px 26px; color: var(--ink) }
+.blk li { line-height: 1.5 }
+.blk .meta { padding: 0 10px 8px 26px; color: var(--muted); word-break: break-all }
+@media (max-width: 560px) { .blk summary { grid-template-columns: 5ch 5ch minmax(0, 1fr) 9ch } .blk summary span:nth-child(3) { display: none } }
+.steps .n.cite { font-family: var(--f-mono) }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="mast">
+    <a class="mark" href="../" id="top">CROWDSENSING LAB<small>University of Houston</small></a>
+    <nav aria-label="Sections">
+      <a href="#demo">Demo</a><a href="#method">How it works</a><a href="#results">Results</a><a href="#directions">Research directions</a><a href="#code">Code &amp; paper</a><a href="https://ieeexplore.ieee.org/document/9569794">Paper</a><a href="../">Proteus</a><a href="#contact">Contact</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <div>
+      <p class="label">Crowdsensed mapping after disasters | blockchain</p>
+      <h1>DEIMOSBC</h1>
+      <p class="lede">After a hurricane, cell towers are down and nobody can be trusted to run a central server. Volunteers' phones collect GPS traces, pass them over Wi-Fi to nearby processors, and a blockchain those processors run on site checks every trace and agrees on one map of the streets that are still passable.</p>
+    </div>
+    <aside class="author" aria-label="Researcher">
+      <p class="label">Research by</p>
+      <p class="aname"><a href="https://raunaksarbajna.com/">Raunak Sarbajna</a></p>
+      <p class="aff"><span class="role">Professor of Practice</span><br>Department of Computer Science, University of Houston</p>
+      <p class="contact"><a href="mailto:rsarbajna@uh.edu">rsarbajna@uh.edu</a><a href="https://raunaksarbajna.com/">raunaksarbajna.com</a></p>
+      <a class="btn" href="https://ieeexplore.ieee.org/document/9569794">Read the paper on IEEE Xplore</a>
+      <p class="small">Sarbajna, Eick &amp; Laszka. <i>DEIMOSBC: A blockchain-based system for crowdsensing after natural disasters.</i> BRAINS 2021, pp. 17–20.</p>
+    </aside>
+  </div>
+
+  <section id="demo" aria-label="Live demo">
+    <div class="demo">
+      <form class="controls" id="controls" onsubmit="return false">
+        <fieldset>
+          <legend class="label">Area</legend>
+          <div class="seg" role="group" aria-label="Area">
+            <button type="button" id="area-grid" aria-pressed="true">Street grid</button>
+            <button type="button" id="area-uh" aria-pressed="false">UH campus</button>
+            <button type="button" id="area-osm" aria-pressed="false">Any area</button>
+          </div>
+          <div class="osm-box" id="osm-box" hidden>
+            <div class="slider"><label for="osm-center">Centre (lat, lon)</label><input id="osm-center" value="29.7604, -95.3698" style="grid-column:1/-1"></div>
+            <div class="row">
+              <select id="osm-mode" aria-label="Network type" style="flex:1"><option value="drive">Roads (drive)</option><option value="walk">Paths (walk)</option></select>
+              <select id="osm-size" aria-label="Area size" style="flex:1"><option value="400">800 m square</option><option value="600" selected>1.2 km square</option><option value="800">1.6 km square</option></select>
+            </div>
+            <button type="button" class="btn ghost" id="osm-load">Load from OpenStreetMap</button>
+          </div>
+          <p class="hint" id="area-hint">A downtown-style street grid, rotated like central Houston.</p>
+        </fieldset>
+
+        <fieldset>
+          <legend class="label">The hurricane</legend>
+          <div class="slider"><label for="damage">Streets flooded or blocked</label><output id="damage-o" for="damage">12%</output>
+            <input type="range" id="damage" min="0" max="35" step="1" value="12"></div>
+          <div class="row"><button type="button" class="btn ghost" id="reshuffle">New flood pattern</button></div>
+          <p class="hint">Click a street on the map to block or reopen it.</p>
+        </fieldset>
+
+        <fieldset>
+          <legend class="label">Volunteers</legend>
+          <div class="slider"><label for="agents">Volunteers</label><output id="agents-o" for="agents">24</output>
+            <input type="range" id="agents" min="6" max="60" step="1" value="24"></div>
+          <div class="slider"><label for="minutes">Time after landfall</label><output id="minutes-o" for="minutes">45 min</output>
+            <input type="range" id="minutes" min="10" max="90" step="5" value="45"></div>
+          <div class="slider"><label for="sigma">GPS noise σ</label><output id="sigma-o" for="sigma">4 m</output>
+            <input type="range" id="sigma" min="1" max="12" step="1" value="4"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend class="label">Bad actors</legend>
+          <div class="slider"><label for="fabricate">Claim flooded streets are open</label><output id="fabricate-o" for="fabricate">10%</output>
+            <input type="range" id="fabricate" min="0" max="30" step="5" value="10"></div>
+          <div class="slider"><label for="spam">Upload garbage</label><output id="spam-o" for="spam">5%</output>
+            <input type="range" id="spam" min="0" max="40" step="5" value="5"></div>
+          <div class="slider"><label for="faulty">Broken GPS</label><output id="faulty-o" for="faulty">5%</output>
+            <input type="range" id="faulty" min="0" max="20" step="5" value="5"></div>
+          <label class="check"><input type="checkbox" id="tamper"> One processor tampers with the blocks it proposes</label>
+        </fieldset>
+
+        <fieldset>
+          <legend class="label">Processors</legend>
+          <div class="slider"><label for="procs">Data processors</label><output id="procs-o" for="procs">5</output>
+            <input type="range" id="procs" min="3" max="9" step="1" value="5"></div>
+          <div class="slider"><label for="range">Wi-Fi range</label><output id="range-o" for="range">120 m</output>
+            <input type="range" id="range" min="60" max="300" step="10" value="120"></div>
+          <button type="button" class="btn" id="run">Start the response</button>
+        </fieldset>
+      </form>
+
+      <div class="stage">
+        <div class="mapwrap" id="mapwrap">
+          <canvas id="map" aria-label="Map of the street network, volunteers, processors and the map agreed on the blockchain" role="img"></canvas>
+          <div class="status" id="status" aria-live="polite">Loading…</div>
+          <div class="zoom"><button type="button" id="zin" aria-label="Zoom in">+</button><button type="button" id="zout" aria-label="Zoom out">−</button><button type="button" id="zfit" aria-label="Fit map">⤢</button></div>
+          <div class="attrib" id="attrib"></div>
+        </div>
+        <div class="scrub">
+          <button type="button" class="btn ghost" id="play" aria-label="Play or pause the replay">Replay</button>
+          <input type="range" id="time" min="0" max="1" step="1" value="1" aria-label="Time after landfall">
+          <output id="time-o" for="time">–</output>
+        </div>
+        <fieldset class="pbar" form="controls">
+          <legend class="label">Smart contract rules | changes re-run the response with the same volunteers</legend>
+          <div class="slider" style="align-content:start"><span style="font-family:var(--f-display);font-stretch:92%;font-size:.875rem">When traces conflict</span>
+            <div class="seg two" role="group" aria-label="Conflict rule" style="grid-column:1/-1">
+              <button type="button" id="pol-both" aria-pressed="true">Discard both</button>
+              <button type="button" id="pol-evid" aria-pressed="false">Count witnesses</button>
+            </div></div>
+          <div class="slider"><label for="support">Volunteers per released street</label><output id="support-o" for="support">1</output>
+            <input type="range" id="support" min="1" max="3" step="1" value="1"></div>
+          <div class="slider"><label for="theta">Merge radius θ</label><output id="theta-o" for="theta">15 m</output>
+            <input type="range" id="theta" min="8" max="25" step="1" value="15"></div>
+          <div class="slider"><label for="freeze">Freeze the chain at error rate</label><output id="freeze-o" for="freeze">60%</output>
+            <input type="range" id="freeze" min="20" max="100" step="5" value="60"></div>
+        </fieldset>
+        <div class="layers" id="layers" aria-label="Map layers">
+          <label><input type="checkbox" id="L-streets" checked> <span class="sw" style="border-color:var(--road)"></span>Streets</label>
+          <label><input type="checkbox" id="L-blocked" checked> <span class="sw dash" style="border-color:var(--destroyed)"></span>Flooded or blocked</label>
+          <label><input type="checkbox" id="L-people" checked> <span class="sw dot" style="background:var(--agent)"></span>Volunteers</label>
+          <label><input type="checkbox" id="L-bad"> <span class="sw ring" style="border-color:var(--bad)"></span>Who is a bad actor</label>
+          <label><input type="checkbox" id="L-procs" checked> <span class="sw tri"></span>Processors and range</label>
+          <label><input type="checkbox" id="L-hazards" checked> <span class="sw x"></span>Hazard reports</label>
+          <label><input type="checkbox" id="L-chain"> <span class="sw" style="border-color:var(--chain)"></span>Map on chain</label>
+          <label><input type="checkbox" id="L-released" checked> <span class="sw" style="border-color:var(--final)"></span>Released map</label>
+        </div>
+        <div class="metrics" id="metrics">
+          <div class="metric"><b id="m-rec">–</b><span>of passable streets on the released map</span></div>
+          <div class="metric"><b id="m-pre">–</b><span>of the released map is passable</span></div>
+          <div class="metric"><b id="m-con" class="bad">–</b><span>of flooded streets shown as open</span></div>
+          <div class="metric"><b id="m-acc">–</b><span id="m-acc-s">traces accepted on chain</span></div>
+          <div class="metric"><b id="m-bad">–</b><span>bad actors cut off by the contract</span></div>
+          <div class="metric"><b id="m-delay">–</b><span>median wait for confirmation</span></div>
+        </div>
+        <div class="ledger" aria-label="Ledger">
+          <div class="ledger-head">
+            <span class="label" id="ledger-title">Ledger</span>
+            <div class="row">
+              <button type="button" class="btn ghost" id="verify">Verify chain</button>
+              <button type="button" class="btn ghost" id="tamper-btn">Tamper with a block</button>
+            </div>
+          </div>
+          <p class="chainmsg" id="chainmsg" aria-live="polite"></p>
+          <div class="blocks" id="blocks"></div>
+        </div>
+      </div>
+    </div>
+    <p class="demo-note" id="demo-note">Everything runs in your browser: a JavaScript port of the reference implementation walks the volunteers, runs the Trace Management System on their phones, and runs the processors' consensus and smart contracts. Block hashes are real SHA-256; signatures are simulated (the reference implementation uses Ed25519).</p>
+  </section>
+
+  <section class="sec" id="method">
+    <div class="sec-head">
+      <p class="label">How it works</p>
+      <div class="prose"><h2>Four steps from a phone in a flooded street to a map anyone can check</h2>
+        <p style="margin-top:12px">We designed DEIMOSBC for the first hours after a disaster: no cell network, no central authority, and some participants who make mistakes or lie. Each step below can be shown on the map above.</p></div>
+    </div>
+    <ol class="steps">
+      <li><span class="n">1 | Register</span><h3>Trust only what existed before the storm</h3>
+        <p>Data processors (command posts) and pre-verified volunteers get cryptographic keys before the disaster. They are written into the first block, so nobody has to be trusted afterwards.</p>
+        <span class="alg">Section IV-C | Register, task assignment</span>
+        <button type="button" class="btn ghost" data-show="procs">Show processors</button></li>
+      <li><span class="n">2 | Collect</span><h3>Phones record where people can walk</h3>
+        <p>Each phone keeps a GPS point every 10 m walked and cuts the stream at sharp turns. Finished traces wait in a queue until the volunteer comes within Wi-Fi range of a processor.</p>
+        <span class="alg">Trace Management System | IV-B.2</span>
+        <button type="button" class="btn ghost" data-show="people">Show volunteers</button></li>
+      <li><span class="n">3 | Verify</span><h3>The contract checks every trace</h3>
+        <p>Processors check who sent the trace and run the smart contract. Impossible data costs the sender a deposit. Traces that overlap are chained into the map. A trace that contradicts another, such as walking through a reported flood, is discarded together with it.</p>
+        <span class="alg">Data Summarization System | IV-A.2, IV-B.1</span>
+        <button type="button" class="btn ghost" data-show="chain">Show the map on chain</button></li>
+      <li><span class="n">4 | Release</span><h3>A majority publishes, or freezes</h3>
+        <p>When nothing new arrives, a majority of processors votes to release a map version anyone can download and check. If too many traces fail, a majority freezes the chain instead.</p>
+        <span class="alg">Broadcast, retirement | IV-C</span>
+        <button type="button" class="btn ghost" data-show="released">Show the released map</button></li>
+    </ol>
+  </section>
+
+  <section class="sec" id="results">
+    <div class="sec-head">
+      <p class="label">Results</p>
+      <div class="prose"><h2>What the reference implementation shows</h2>
+        <p style="margin-top:12px">Our 2021 paper presented the design. The numbers below come from the reference implementation: a 2 km street grid near Houston with two flood zones, 40 volunteers and 5 processors, one hour after landfall, three seeds per row unless noted. Contamination is the share of flooded street length that the released map shows as open, the error that sends a rescue team into the water.</p></div>
+    </div>
+    <div class="tables" id="tables"></div>
+  </section>
+
+  <section class="sec" id="directions">
+    <div class="sec-head">
+      <p class="label">Research directions</p>
+      <div class="prose"><h2>Do you want to work on this type of problem?</h2>
+        <p style="margin-top:12px">Then contact me at <a href="mailto:rsarbajna@uh.edu">rsarbajna@uh.edu</a>. Implementing DEIMOSBC end to end exposed the questions below. Each starts from code that already exists in the repository, and several connect it to <a href="../">Proteus</a>.</p>
+        <p style="margin-top:16px"><a class="btn" href="mailto:rsarbajna@uh.edu?subject=Crowdsensing%20Lab%20research" style="display:inline-block;text-decoration:none">Contact Raunak Sarbajna</a></p></div>
+    </div>
+    <div class="dirs" id="dirs"></div>
+  </section>
+
+  <section class="sec" id="code">
+    <div class="sec-head">
+      <p class="label">Code &amp; paper</p>
+      <div class="prose"><h2>Reference implementation</h2>
+        <p style="margin-top:12px">The Python package implements the whole system: the permissioned blockchain, the smart contracts, the Trace Management and Data Summarization systems, the three kinds of nodes, and the hurricane simulation with honest and dishonest participants.</p></div>
+    </div>
+    <div class="code-grid">
+      <ul class="links">
+        <li><a href="https://github.com/RaunakDune/deimosbc-implementation">deimosbc-implementation</a><span>Python package, command-line tool, 53 tests, design and research notes. MIT licence.</span></li>
+        <li><a href="https://github.com/RaunakDune/deimosbc-implementation/blob/main/docs/DESIGN.md">Design notes</a><span>Every element of our design mapped to code, and every decision our 2021 description left open.</span></li>
+        <li><a href="https://github.com/RaunakDune/deimosbc-implementation/blob/main/docs/PROTEUS_INTEGRATION.md">Connecting to Proteus</a><span>How Proteus can run as the on-chain map-merging step.</span></li>
+        <li><a href="https://ieeexplore.ieee.org/document/9569794">The paper</a><span>BRAINS 2021, pp. 17–20, doi:10.1109/BRAINS52497.2021.9569794</span></li>
+      </ul>
+      <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+        <div><div class="copyrow"><span class="label">Run it</span><button type="button" class="btn ghost" data-copy="cmd">Copy</button></div>
+<pre id="cmd">git clone https://github.com/RaunakDune/deimosbc-implementation
+cd deimosbc-implementation &amp;&amp; pip install -e ".[plot,dev]"
+deimosbc simulate --out runs/demo
+deimosbc verify runs/demo/chain.jsonl</pre></div>
+        <div><div class="copyrow"><span class="label">Cite</span><button type="button" class="btn ghost" data-copy="bib">Copy BibTeX</button></div>
+<pre id="bib">@inproceedings{sarbajna2021deimosbc,
+  title     = {{DEIMOSBC}: A Blockchain-based System for Crowdsensing after Natural Disasters},
+  author    = {Sarbajna, Raunak and Eick, Christoph F. and Laszka, Aron},
+  booktitle = {3rd Conference on Blockchain Research \&amp; Applications for Innovative Networks and Services (BRAINS)},
+  pages     = {17--20},
+  year      = {2021},
+  doi       = {10.1109/BRAINS52497.2021.9569794}
+}</pre></div>
+      </div>
+    </div>
+  </section>
+
+  <footer id="contact">
+    <span>Crowdsensing Lab | <a href="https://raunaksarbajna.com/">Raunak Sarbajna</a>, University of Houston | <a href="mailto:rsarbajna@uh.edu">rsarbajna@uh.edu</a> | <a href="https://ieeexplore.ieee.org/document/9569794">Paper</a> | <a href="https://github.com/RaunakDune/deimosbc-implementation">Code</a> | <a href="../">Proteus</a></span>
+    <span id="foot-attrib">Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, streets via <a href="https://openfreemap.org/">OpenFreeMap</a> and <a href="https://openmaptiles.org/">OpenMapTiles</a>. UH campus network from ProteusData.</span>
+  </footer>
+</div>
+
+<script src="../js/proteus-engine.js?v=2026-10-29a"></script>
+<script src="../js/uh-campus.js?v=2026-10-29a"></script>
+<script src="js/deimosbc-engine.js?v=2026-10-29a"></script>
+<script src="js/app.js?v=2026-10-29a"></script>
+</body>
+</html>
