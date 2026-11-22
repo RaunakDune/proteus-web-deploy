@@ -3,24 +3,48 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="text-scale" content="scale">
 <title>Proteus | Crowdsensing Lab</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self' https://tiles.openfreemap.org https://overpass-api.de https://overpass.kumi.systems; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="theme-color" content="#f1f2ec">
 <link rel="canonical" href="https://crowdsensinglab.org/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="Proteus | Crowdsensing Lab">
 <meta property="og:description" content="Combining GPS traces collected by volunteers after a disaster into a verified map of passable roads. Live demo, paper, code and data.">
 <meta property="og:url" content="https://crowdsensinglab.org/">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="Crowdsensing Lab">
+<meta property="og:image" content="https://crowdsensinglab.org/og/proteus-card.jpg">
+<meta property="og:image:width" content="1600">
+<meta property="og:image:height" content="900">
+<meta property="og:image:alt" content="Proteus title card with a map of Downtown Houston streets rebuilt from simulated volunteer GPS traces.">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="description" content="Proteus combines GPS traces collected by volunteers after a disaster into a verified map of the roads that are still passable.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<!-- Self-hosted fonts: no third-party request; the two faces above the fold are preloaded. -->
+<link rel="preload" href="fonts/archivo-wdth.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/source-serif-4-400.woff2" as="font" type="font/woff2" crossorigin>
+<script defer src="js/proteus-engine.js?v=2026-11-21"></script>
+<script defer src="js/app.js?v=2026-11-21"></script>
 <style>
+@font-face { font-family: "Archivo"; font-style: normal; font-display: swap; font-weight: 100 900; font-stretch: 62% 125%;
+  src: url("fonts/archivo-wdth.woff2") format("woff2-variations"), url("fonts/archivo-wdth.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "Source Serif 4"; font-style: normal; font-display: swap; font-weight: 400; src: url("fonts/source-serif-4-400.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "Source Serif 4"; font-style: normal; font-display: swap; font-weight: 600; src: url("fonts/source-serif-4-600.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-display: swap; font-weight: 400; src: url("fonts/ibm-plex-mono-400.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-display: swap; font-weight: 500; src: url("fonts/ibm-plex-mono-500.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
 /* Crowdsensing Lab. Layout: a survey-sheet page, compact masthead, the live map as the hero, then
    ruled sections that read like a field report. Colours follow map-legend roles. */
 :root {
   --paper: #f1f2ec; --panel: #e6e9e1; --ink: #1a2320; --muted: #5a6761; --rule: #c6cdc4;
-  --mapbg: #f8f8f4; --road: #aab3ac; --trace: #9fb0c2; --verified: #2c66d6;
-  --final: #0b7a52; --destroyed: #c63a2e; --junction: #d48a00; --agent: #1a2320;
+  --mapbg: #f8f8f4; --road: #838d87; --trace: #9fb0c2; --verified: #2c66d6;
+  --final: #0b7a52; --destroyed: #c63a2e; --junction: #b07000; --agent: #1a2320;
+  --control: #6b7771; /* borders of form controls: at least 3:1 on every panel colour */
   --focus: #2c66d6; color-scheme: light;
   --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
@@ -59,18 +83,18 @@ button, input, select { font: inherit; color: inherit }
 .hero .lede { font-size: var(--s1); max-width: 56ch; margin-top: 14px }
 .cite-line { font-size: var(--s-1); color: var(--muted); max-width: 40ch; text-align: right }
 .cite-line a { color: var(--ink) }
-@media (max-width: 760px) { .hero { grid-template-columns: 1fr } .cite-line { text-align: left } }
+@media (max-width: 47.5em) { .hero { grid-template-columns: 1fr } .cite-line { text-align: left } }
 
 /* demo */
-.demo { display: grid; grid-template-columns: 290px minmax(0, 1fr); border: 1px solid var(--rule); background: var(--panel) }
-@media (max-width: 900px) { .demo { grid-template-columns: 1fr } }
+.demo { display: grid; grid-template-columns: 18.125rem minmax(0, 1fr); border: 1px solid var(--rule); background: var(--panel) }
+@media (max-width: 56.25em) { .demo { grid-template-columns: 1fr } }
 .controls { padding: 16px; display: flex; flex-direction: column; gap: 18px; border-right: 1px solid var(--rule); min-width: 0 }
-@media (max-width: 900px) { .controls { border-right: 0; border-bottom: 1px solid var(--rule) } }
+@media (max-width: 56.25em) { .controls { border-right: 0; border-bottom: 1px solid var(--rule) } }
 fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0 }
 legend { padding: 0; margin-bottom: 8px }
-.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--rule); background: var(--paper) }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--control); background: var(--paper) }
 .seg button { border: 0; background: transparent; padding: 7px 4px; font-family: var(--f-display); font-stretch: 88%; font-size: .875rem; cursor: pointer; line-height: 1.2 }
-.seg button + button { border-left: 1px solid var(--rule) }
+.seg button + button { border-left: 1px solid var(--control) }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper) }
 .seg button:disabled { color: var(--muted); cursor: not-allowed; text-decoration: line-through }
 .slider { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; font-size: .875rem; align-items: center }
@@ -84,16 +108,18 @@ legend { padding: 0; margin-bottom: 8px }
 .btn:disabled { opacity: .55; cursor: progress }
 .row { display: flex; flex-wrap: wrap; gap: 8px }
 .osm-box { display: flex; flex-direction: column; gap: 8px }
-.osm-box input, .osm-box select { width: 100%; padding: 6px 8px; border: 1px solid var(--rule); background: var(--paper) }
+.osm-box input, .osm-box select { width: 100%; padding: 6px 8px; border: 1px solid var(--control); background: var(--paper) }
+#osm-center { grid-column: 1 / -1 }
+.osm-box .row { flex-direction: column }
 
 .stage { display: flex; flex-direction: column; min-width: 0 }
 .mapwrap { position: relative; height: clamp(440px, 64vh, 700px); background: var(--mapbg); touch-action: none }
-@media (max-width: 900px) { .mapwrap { height: 440px } }
+@media (max-width: 56.25em) { .mapwrap { height: 440px } }
 canvas#map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab }
 canvas#map.hover { cursor: pointer }
-.zoom { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; border: 1px solid var(--rule); background: var(--paper) }
+.zoom { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; border: 1px solid var(--control); background: var(--paper) }
 .zoom button { width: 34px; height: 32px; border: 0; background: transparent; cursor: pointer; font-family: var(--f-mono); font-size: 1rem }
-.zoom button + button { border-top: 1px solid var(--rule) }
+.zoom button + button { border-top: 1px solid var(--control) }
 .status { position: absolute; left: 10px; top: 10px; padding: 5px 9px; background: var(--paper); border: 1px solid var(--rule);
   font-family: var(--f-mono); font-size: .75rem; max-width: calc(100% - 70px) }
 .attrib { position: absolute; right: 8px; bottom: 6px; font-size: .6875rem; color: var(--muted); background: color-mix(in srgb, var(--mapbg) 80%, transparent); padding: 1px 5px }
@@ -103,25 +129,27 @@ canvas#map.hover { cursor: pointer }
 .sw.dot { width: 9px; height: 9px; border: 0; border-radius: 50% }
 .sw.ring { width: 10px; height: 10px; border: 2px solid; border-radius: 50% }
 .sw.dash { border-top-style: dashed }
+.sw.road { border-color: var(--road) } .sw.damage { border-color: var(--destroyed) } .sw.trace { background: var(--trace) }
+.sw.verified { background: var(--verified) } .sw.junction { border-color: var(--junction) } .sw.final { border-color: var(--final) }
 .metrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-top: 1px solid var(--rule) }
-@media (max-width: 1100px) { .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)) } }
-@media (max-width: 480px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+@media (max-width: 68.75em) { .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)) } }
+@media (max-width: 30em) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
 .metric { padding: 10px 14px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); min-width: 0 }
 .metric b { display: block; font-family: var(--f-display); font-weight: 750; font-stretch: 85%; font-size: 1.625rem; line-height: 1.1; font-variant-numeric: tabular-nums }
 .metric span { font-size: .75rem; color: var(--muted); line-height: 1.3; display: block }
 .pbar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 22px; padding: 12px 14px; border-top: 1px solid var(--rule) }
 .pbar legend { grid-column: 1 / -1; float: left; width: 100%; margin-bottom: 0 }
-@media (max-width: 700px) { .pbar { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+@media (max-width: 43.75em) { .pbar { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
 .demo-note { font-size: var(--s-1); color: var(--muted); padding-block: 10px 0 }
 
 /* sections */
 section.sec { padding-block: 64px 8px; border-bottom: 1px solid var(--rule) }
 section.sec:last-of-type { border-bottom: 0 }
-.sec-head { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px 40px; margin-bottom: 28px }
-@media (max-width: 760px) { .sec-head { grid-template-columns: 1fr } }
+.sec-head { display: grid; grid-template-columns: 13.75rem minmax(0, 1fr); gap: 12px 40px; margin-bottom: 28px }
+@media (max-width: 47.5em) { .sec-head { grid-template-columns: 1fr } }
 .steps { list-style: none; padding: 0; margin: 0 0 56px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--ink) }
-@media (max-width: 1000px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
-@media (max-width: 560px) { .steps { grid-template-columns: 1fr } }
+@media (max-width: 62.5em) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+@media (max-width: 35em) { .steps { grid-template-columns: 1fr } }
 .steps li { padding: 16px 20px 20px 0; display: flex; flex-direction: column; gap: 8px; min-width: 0 }
 .steps .n { font-family: var(--f-mono); font-size: .8125rem; color: var(--muted) }
 .steps p { font-size: .9375rem }
@@ -129,19 +157,23 @@ section.sec:last-of-type { border-bottom: 0 }
 .steps button { align-self: flex-start; margin-top: auto }
 
 .tables { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; margin-bottom: 56px }
-@media (max-width: 1000px) { .tables { grid-template-columns: 1fr } }
+@media (max-width: 62.5em) { .tables { grid-template-columns: 1fr } }
 .tbl { min-width: 0; overflow-x: auto }
+.prose > p + p, .prose h2 + p { margin-top: 12px } .prose .cta { margin-top: 16px }
+.cta .btn { display: inline-block; text-decoration: none }
+.code-col { display: flex; flex-direction: column; gap: 20px; min-width: 0 }
 table { border-collapse: collapse; width: 100%; font-size: .875rem }
 caption { text-align: left; font-family: var(--f-display); font-weight: 700; font-stretch: 92%; font-size: 1rem; padding-bottom: 8px }
 th, td { text-align: left; padding: 6px 8px 6px 0; border-bottom: 1px solid var(--rule); vertical-align: middle }
 th { font-family: var(--f-mono); font-weight: 500; font-size: .6875rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
 td.v { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap }
-.bar { display: block; height: 5px; background: var(--final); margin-top: 3px; min-width: 2px }
-tr.grp td { font-family: var(--f-display); font-weight: 700; font-stretch: 92%; padding-top: 12px }
+.bar { display: block; block-size: 5px; inline-size: var(--w, 0%); background: var(--final); margin-top: 3px; min-inline-size: 2px }
+tr.grp th { font-family: var(--f-display); font-weight: 700; font-stretch: 92%; font-size: .875rem; text-transform: none; letter-spacing: 0; color: var(--ink); padding-top: 12px }
+tbody th[scope="row"] { font-family: var(--f-body); font-size: .875rem; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ink) }
 .tblnote { font-size: .8125rem; color: var(--muted); margin-top: 8px }
 
 .dirs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 40px; margin-bottom: 56px }
-@media (max-width: 800px) { .dirs { grid-template-columns: 1fr } }
+@media (max-width: 50em) { .dirs { grid-template-columns: 1fr } }
 .dir { padding-block: 18px 22px; border-top: 1px solid var(--rule); display: flex; flex-direction: column; gap: 8px; min-width: 0 }
 .dir .q { font-size: 1rem }
 .dir .proj { font-size: .9375rem; color: var(--muted) }
@@ -150,7 +182,7 @@ tr.grp td { font-family: var(--f-display); font-weight: 700; font-stretch: 92%; 
 .dir .fit { font-family: var(--f-mono); font-size: .6875rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
 
 .code-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; margin-bottom: 56px }
-@media (max-width: 800px) { .code-grid { grid-template-columns: 1fr } }
+@media (max-width: 50em) { .code-grid { grid-template-columns: 1fr } }
 .links { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column }
 .links li { padding-block: 10px; border-top: 1px solid var(--rule); display: flex; flex-direction: column; gap: 2px }
 .links a { font-family: var(--f-display); font-weight: 700; font-stretch: 92% }
@@ -169,13 +201,23 @@ footer { padding-block: 28px 40px; font-size: .875rem; color: var(--muted); disp
 .author .btn { margin-top: 12px; text-align: center; text-decoration: none }
 .author .btn:hover { color: var(--paper); background: var(--verified); border-color: var(--verified) }
 .author .small { font-size: .8125rem; color: var(--muted); margin-top: 6px }
-@media (max-width: 760px) { .author { max-width: none; min-width: 0 } }
+@media (max-width: 47.5em) { .author { max-width: none; min-width: 0 } }
 .mark small { font-weight: 500; font-stretch: 100%; color: var(--muted); letter-spacing: .04em; margin-left: 8px; font-size: .8125rem }
 footer a { color: var(--ink) }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap }
+.skip-link { position: absolute; left: 16px; top: 8px; z-index: 10; padding: 8px 12px; background: var(--ink); color: var(--paper);
+  font-family: var(--f-display); font-weight: 700; transform: translateY(-200%) }
+.skip-link:focus-visible { transform: none }
+@media (forced-colors: active) {
+  /* the legend colours carry meaning: they must match the map */
+  .sw { forced-color-adjust: none }
+  .seg button[aria-pressed="true"] { outline: 3px solid CanvasText; outline-offset: -5px }
+  .bar { background: CanvasText }
+}
 </style>
 </head>
 <body>
-
+<a class="skip-link" href="#content">Skip to main content</a>
 <div class="wrap">
   <header class="mast">
     <a class="mark" href="#top" id="top">CROWDSENSING LAB<small>University of Houston</small></a>
@@ -184,6 +226,7 @@ footer a { color: var(--ink) }
     </nav>
   </header>
 
+  <main id="content">
   <div class="hero">
     <div>
       <p class="label">Crowdsensed mapping after disasters</p>
@@ -200,9 +243,10 @@ footer a { color: var(--ink) }
     </aside>
   </div>
 
-  <section id="demo" aria-label="Live demo">
+  <section id="demo" aria-labelledby="demo-title">
+    <h2 id="demo-title" class="visually-hidden">Live demo</h2>
     <div class="demo">
-      <form class="controls" id="controls" onsubmit="return false">
+      <form class="controls" id="controls">
         <fieldset>
           <legend class="label">Area</legend>
           <div class="seg" role="group" aria-label="Area">
@@ -211,10 +255,10 @@ footer a { color: var(--ink) }
             <button type="button" id="area-osm" aria-pressed="false">Any area</button>
           </div>
           <div class="osm-box" id="osm-box" hidden>
-            <div class="slider"><label for="osm-center">Centre (lat, lon)</label><input id="osm-center" value="29.7604, -95.3698" style="grid-column:1/-1"></div>
+            <div class="slider"><label for="osm-center">Centre (lat, lon)</label><input id="osm-center" value="29.7604, -95.3698" inputmode="decimal" autocomplete="off" spellcheck="false"></div>
             <div class="row">
-              <select id="osm-mode" aria-label="Network type" style="flex:1"><option value="drive">Roads (drive)</option><option value="walk">Paths (walk)</option></select>
-              <select id="osm-size" aria-label="Area size" style="flex:1"><option value="400">800 m square</option><option value="600" selected>1.2 km square</option><option value="800">1.6 km square</option></select>
+              <select id="osm-mode" aria-label="Network type"><option value="drive">Roads (drive)</option><option value="walk">Paths (walk)</option></select>
+              <select id="osm-size" aria-label="Area size"><option value="400">800 m square</option><option value="600" selected>1.2 km square</option><option value="800">1.6 km square</option></select>
             </div>
             <button type="button" class="btn ghost" id="osm-load">Load from OpenStreetMap</button>
           </div>
@@ -244,8 +288,8 @@ footer a { color: var(--ink) }
 
       <div class="stage">
         <div class="mapwrap" id="mapwrap">
-          <canvas id="map" aria-label="Map of the road network, volunteer traces and the reconstructed map" role="img"></canvas>
-          <div class="status" id="status" aria-live="polite">Loading…</div>
+          <canvas id="map" aria-label="Map of the road network, volunteer traces and the reconstructed map" aria-describedby="metrics" role="img"></canvas>
+          <div class="status" id="status">Loading…</div>
           <div class="zoom"><button type="button" id="zin" aria-label="Zoom in">+</button><button type="button" id="zout" aria-label="Zoom out">−</button><button type="button" id="zfit" aria-label="Fit map">⤢</button></div>
           <div class="attrib" id="attrib"></div>
         </div>
@@ -261,15 +305,16 @@ footer a { color: var(--ink) }
             <input type="range" id="l" min="10" max="50" step="1" value="20"></div>
           
         </fieldset>
-        <div class="layers" id="layers" aria-label="Map layers">
-          <label><input type="checkbox" id="L-map" checked> <span class="sw" style="border-color:var(--road)"></span>Pre-disaster map</label>
-          <label><input type="checkbox" id="L-damage" checked> <span class="sw dash" style="border-color:var(--destroyed)"></span>Destroyed roads</label>
-          <label><input type="checkbox" id="L-traces" checked> <span class="sw dot" style="background:var(--trace)"></span>GPS fixes</label>
-          <label><input type="checkbox" id="L-verified" checked> <span class="sw dot" style="background:var(--verified)"></span>Verified fixes</label>
-          <label><input type="checkbox" id="L-junctions" checked> <span class="sw ring" style="border-color:var(--junction)"></span>Detected intersections</label>
-          <label><input type="checkbox" id="L-final" checked> <span class="sw" style="border-color:var(--final)"></span>Proteus map</label>
+        <div class="layers" id="layers" role="group" aria-label="Map layers">
+          <label><input type="checkbox" id="L-map" checked> <span class="sw road"></span>Pre-disaster map</label>
+          <label><input type="checkbox" id="L-damage" checked> <span class="sw dash damage"></span>Destroyed roads</label>
+          <label><input type="checkbox" id="L-traces" checked> <span class="sw dot trace"></span>GPS fixes</label>
+          <label><input type="checkbox" id="L-verified" checked> <span class="sw dot verified"></span>Verified fixes</label>
+          <label><input type="checkbox" id="L-junctions" checked> <span class="sw ring junction"></span>Detected intersections</label>
+          <label><input type="checkbox" id="L-final" checked> <span class="sw final"></span>Proteus map</label>
         </div>
-        <div class="metrics" id="metrics">
+        <p id="announce" class="visually-hidden" aria-live="polite"></p>
+        <div class="metrics" id="metrics" role="group" aria-label="Results of this run">
           <div class="metric"><b id="m-cov">–</b><span>of junctions reached by ≥ 3 volunteers</span></div>
           <div class="metric"><b id="m-ver">–</b><span>of GPS fixes verified</span></div>
           <div class="metric"><b id="m-rec">–</b><span>of passable roads recovered</span></div>
@@ -286,7 +331,7 @@ footer a { color: var(--ink) }
     <div class="sec-head">
       <p class="label">Method</p>
       <div class="prose"><h2>Four stages from noisy traces to a usable map</h2>
-        <p style="margin-top:12px">Crowdsensed data is inconsistent: phones are noisy, volunteers wander, and two roads can look connected when they cross at different levels. Proteus never trusts a single trace. Each stage below can be shown on the map above.</p></div>
+        <p>Crowdsensed data is inconsistent: phones are noisy, volunteers wander, and two roads can look connected when they cross at different levels. Proteus never trusts a single trace. Each stage below can be shown on the map above.</p></div>
     </div>
     <ol class="steps">
       <li><span class="n">1 | Collect</span><h3>Send volunteers out with rules</h3>
@@ -312,7 +357,7 @@ footer a { color: var(--ink) }
     <div class="sec-head">
       <p class="label">Results</p>
       <div class="prose"><h2>Tested on two very different parts of Houston</h2>
-        <p style="margin-top:12px">The paper evaluates Proteus with an agent-based simulation on Downtown Houston, a regular street grid, and the University of Houston campus, a network of curving footpaths. The “x-edge” models need x volunteers to confirm each edge. Three confirmations are the practical minimum; two leave large gaps.</p></div>
+        <p>The paper evaluates Proteus with an agent-based simulation on Downtown Houston, a regular street grid, and the University of Houston campus, a network of curving footpaths. The “x-edge” models need x volunteers to confirm each edge. Three confirmations are the practical minimum; two leave large gaps.</p></div>
     </div>
     <div class="tables" id="tables"></div>
   </section>
@@ -321,8 +366,8 @@ footer a { color: var(--ink) }
     <div class="sec-head">
       <p class="label">Research directions</p>
       <div class="prose"><h2>Do you want to work on this type of problem?</h2>
-        <p style="margin-top:12px">Then contact me at <a href="mailto:rsarbajna@uh.edu">rsarbajna@uh.edu</a>. Proteus has so far been tested in simulation, and the projects below move it toward real deployments. Each one starts from code that already exists in the repository.</p>
-        <p style="margin-top:16px"><a class="btn" href="mailto:rsarbajna@uh.edu?subject=Crowdsensing%20Lab%20research" style="display:inline-block;text-decoration:none">Contact Raunak Sarbajna</a></p></div>
+        <p>Then contact me at <a href="mailto:rsarbajna@uh.edu">rsarbajna@uh.edu</a>. Proteus has so far been tested in simulation, and the projects below move it toward real deployments. Each one starts from code that already exists in the repository.</p>
+        <p class="cta"><a class="btn" href="mailto:rsarbajna@uh.edu?subject=Crowdsensing%20Lab%20research">Contact Raunak Sarbajna</a></p></div>
     </div>
     <div class="dirs" id="dirs"></div>
   </section>
@@ -331,7 +376,7 @@ footer a { color: var(--ink) }
     <div class="sec-head">
       <p class="label">Code &amp; data</p>
       <div class="prose"><h2>Reference implementation and published data</h2>
-        <p style="margin-top:12px">The Python package implements Algorithms 1–6, the volunteer simulator and every experiment in the paper. It runs on real GPS traces as well as simulated ones.</p></div>
+        <p>The Python package implements Algorithms 1–6, the volunteer simulator and every experiment in the paper. It runs on real GPS traces as well as simulated ones.</p></div>
     </div>
     <div class="code-grid">
       <ul class="links">
@@ -339,14 +384,14 @@ footer a { color: var(--ink) }
         <li><a href="https://github.com/UH-DAIS/ProteusData">ProteusData</a><span>Raw results of the parameter study and the generated maps from the paper.</span></li>
         <li><a href="https://link.springer.com/article/10.1007/s10707-026-00567-1">The paper</a><span>GeoInformatica 30:7 (2026), doi:10.1007/s10707-026-00567-1</span></li>
       </ul>
-      <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
-        <div><div class="copyrow"><span class="label">Run it</span><button type="button" class="btn ghost" data-copy="cmd">Copy</button></div>
-<pre id="cmd">git clone https://github.com/RaunakDune/proteus-implementation
+      <div class="code-col">
+        <div><div class="copyrow"><span class="label" id="cmd-label">Run it</span><button type="button" class="btn ghost" data-copy="cmd" aria-describedby="cmd-label">Copy</button></div>
+<pre role="region" tabindex="0" aria-labelledby="cmd-label"><code id="cmd">git clone https://github.com/RaunakDune/proteus-implementation
 cd proteus-implementation &amp;&amp; pip install -e ".[analysis]"
 proteus simulate --grid 6,6,100 --agents 24 --steps 1000 --out sim/
-proteus run --map premap.csv --traces traces.csv --out out/</pre></div>
-        <div><div class="copyrow"><span class="label">Cite</span><button type="button" class="btn ghost" data-copy="bib">Copy BibTeX</button></div>
-<pre id="bib">@article{sarbajna2026proteus,
+proteus run --map premap.csv --traces traces.csv --out out/</code></pre></div>
+        <div><div class="copyrow"><span class="label" id="bib-label">Cite</span><button type="button" class="btn ghost" data-copy="bib">Copy BibTeX</button></div>
+<pre role="region" tabindex="0" aria-labelledby="bib-label"><code id="bib">@article{sarbajna2026proteus,
   title   = {Proteus: A system for combining paths collected using crowdsensing},
   author  = {Sarbajna, Raunak and Eick, Christoph F. and Ni, Jianyuan},
   journal = {GeoInformatica},
@@ -354,10 +399,12 @@ proteus run --map premap.csv --traces traces.csv --out out/</pre></div>
   eid     = {7},
   year    = {2026},
   doi     = {10.1007/s10707-026-00567-1}
-}</pre></div>
+}</code></pre></div>
       </div>
     </div>
   </section>
+
+  </main>
 
   <footer id="contact">
     <span>Crowdsensing Lab | <a href="https://raunaksarbajna.com/">Raunak Sarbajna</a>, University of Houston | <a href="mailto:rsarbajna@uh.edu">rsarbajna@uh.edu</a> | <a href="https://link.springer.com/article/10.1007/s10707-026-00567-1">Paper</a> | <a href="https://github.com/RaunakDune/proteus-implementation">Code</a> | <a href="deimosbc/">DEIMOSBC</a></span>
@@ -365,8 +412,5 @@ proteus run --map premap.csv --traces traces.csv --out out/</pre></div>
   </footer>
 </div>
 
-<script src="js/proteus-engine.js?v=2026-10-25c"></script>
-<script src="js/uh-campus.js?v=2026-10-25c"></script>
-<script src="js/app.js?v=2026-10-25c"></script>
 </body>
 </html>

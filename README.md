@@ -12,11 +12,11 @@ The site is static and is served by GitHub Pages at https://crowdsensinglab.org.
 |---|---|
 | `index.html` | The page (content and styles) |
 | `js/proteus-engine.js` | Browser port of Proteus: volunteer simulation, verification (Alg. 2), intersections (Alg. 3–4), map combination (Alg. 5–6) |
+| `js/proteus-worker.js` | Runs the simulation and the Proteus pipeline in a Web Worker so the page stays responsive |
 | `js/app.js` | Demo UI: map rendering, controls, OpenStreetMap loading |
-| `js/uh-campus.js` | UH campus footpath network from [ProteusData](https://github.com/UH-DAIS/ProteusData) |
-| `deimosbc/index.html` | DEIMOSBC page at [/deimosbc](https://crowdsensinglab.org/deimosbc/) (BRAINS 2021) |
-| `deimosbc/js/deimosbc-engine.js` | Browser port of DEIMOSBC: volunteers, Trace Management System, smart contracts, consensus, SHA-256 ledger |
-| `deimosbc/js/app.js` | DEIMOSBC demo UI (reuses the network loaders in `js/proteus-engine.js`) |
+| `js/uh-campus.json` | UH campus footpath network from [ProteusData](https://github.com/UH-DAIS/ProteusData), downloaded only when that area is picked |
+| `fonts/` | Self-hosted Archivo, Source Serif 4 and IBM Plex Mono (SIL Open Font License, see `fonts/LICENSE.txt`) |
+| `og/proteus-card.jpg` | Preview image for links shared on social media |
 | `CNAME` | Custom domain for GitHub Pages |
 
 The reference Python implementations live at

@@ -11,18 +11,21 @@ const T4 = [["University of Houston campus", [["2-edge", 340, 24.8], ["3-edge", 
 const T5 = [["University of Houston campus", 1400, 5600, 6100], ["Downtown Houston", 28000, 65000, 59000]];
 const fmt = (n) => n.toLocaleString("en-US");
 function tableHTML() {
-  let a = `<div class="tbl"><table><caption>Edge verification</caption><thead><tr><th>Model</th><th>Input</th><th>Verified</th><th>Accuracy</th></tr></thead><tbody>`;
-  for (const [g, rows] of T2) { a += `<tr class="grp"><td colspan="4">${g}</td></tr>`;
-    for (const r of rows) a += `<tr><td>${r[0]}</td><td class="v">${fmt(r[1])}</td><td class="v">${fmt(r[2])}</td><td class="v">${r[3].toFixed(1)}%<span class="bar" style="width:${r[3]}%"></span></td></tr>`; }
-  a += `</tbody></table><p class="tblnote">Share of ground-truth edges reproduced (Table 2).</p></div>`;
-  let b = `<div class="tbl"><table><caption>Path combination</caption><thead><tr><th>Model</th><th>Input edges</th><th>Similarity</th></tr></thead><tbody>`;
-  for (const [g, rows] of T4) { b += `<tr class="grp"><td colspan="3">${g}</td></tr>`;
-    for (const r of rows) b += `<tr><td>${r[0]}</td><td class="v">${fmt(r[1])}</td><td class="v">${r[2].toFixed(1)}%<span class="bar" style="width:${r[2]}%"></span></td></tr>`; }
-  b += `</tbody></table><p class="tblnote">Graph-edit-distance similarity of the combined map to ground truth (Table 4).</p></div>`;
-  let c = `<div class="tbl"><table><caption>Volunteer deployment</caption><thead><tr><th>Area</th><th>Quadrants</th><th>Whole map</th><th>Random</th></tr></thead><tbody>`;
-  for (const r of T5) c += `<tr><td>${r[0]}</td><td class="v"><b>${fmt(r[1])}</b></td><td class="v">${fmt(r[2])}</td><td class="v">${fmt(r[3])}</td></tr>`;
-  c += `</tbody></table><p class="tblnote">Time steps until every node has been visited by three volunteers, 3-edge model (Table 5). Quadrant-based deployment covers both areas fastest.</p></div>`;
-  $("tables").innerHTML = a + b + c;
+  // Each table scrolls inside its own region, which keyboard users can reach and scroll.
+  const wrap = (id, caption, head, body, note) =>
+    `<div class="tbl" role="region" tabindex="0" aria-labelledby="${id}"><table><caption id="${id}">${caption}</caption>` +
+    `<thead><tr>${head.map((h) => `<th scope="col">${h}</th>`).join("")}</tr></thead>${body}</table><p class="tblnote">${note}</p></div>`;
+  const bar = (v) => `<span class="bar" style="--w: ${v}%"></span>`;
+  const group = (g, cols, rows) => `<tbody><tr class="grp"><th scope="rowgroup" colspan="${cols}">${g}</th></tr>${rows}</tbody>`;
+  const a = T2.map(([g, rows]) => group(g, 4, rows.map((r) =>
+    `<tr><th scope="row">${r[0]}</th><td class="v">${fmt(r[1])}</td><td class="v">${fmt(r[2])}</td><td class="v">${r[3].toFixed(1)}%${bar(r[3])}</td></tr>`).join(""))).join("");
+  const b = T4.map(([g, rows]) => group(g, 3, rows.map((r) =>
+    `<tr><th scope="row">${r[0]}</th><td class="v">${fmt(r[1])}</td><td class="v">${r[2].toFixed(1)}%${bar(r[2])}</td></tr>`).join(""))).join("");
+  const c = `<tbody>${T5.map((r) => `<tr><th scope="row">${r[0]}</th><td class="v"><b>${fmt(r[1])}</b></td><td class="v">${fmt(r[2])}</td><td class="v">${fmt(r[3])}</td></tr>`).join("")}</tbody>`;
+  $("tables").innerHTML =
+    wrap("t-verify", "Edge verification", ["Model", "Input", "Verified", "Accuracy"], a, "Share of ground-truth edges reproduced (Table 2).") +
+    wrap("t-combine", "Path combination", ["Model", "Input edges", "Similarity"], b, "Graph-edit-distance similarity of the combined map to ground truth (Table 4).") +
+    wrap("t-deploy", "Volunteer deployment", ["Area", "Quadrants", "Whole map", "Random"], c, "Time steps until every node has been visited by three volunteers, 3-edge model (Table 5). Quadrant-based deployment covers both areas fastest.");
 }
 const DIRS = [
   ["Field trials with real phones", "Proteus has only seen simulated GPS noise. Real smartphone error is heavy-tailed: about 7 m standard deviation overall, with 95th-percentile errors near 18 m in suburban driving.",
@@ -57,7 +60,8 @@ function selectEl(el) { const r = document.createRange(); r.selectNodeContents(e
 /* ----------------------------------------------------------- demo state */
 const P = Proteus;
 const S = { area: "grid", net: null, chains: null, destroyed: new Set(), sim: null, res: null, animStep: Infinity,
-  view: { s: 1, cx: 0, cy: 0 }, hoverChain: -1, tilesOn: false, tiles: new Map(), seed: 7, busy: false };
+  view: { s: 1, cx: 0, cy: 0 }, hoverChain: -1, tilesOn: false, tiles: new Map(), seed: 7, busy: false,
+  netReady: null, simToken: 0, runToken: 0 };
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const canvas = $("map"), ctx = canvas.getContext("2d"), wrap = $("mapwrap");
 let colors = {};
@@ -67,31 +71,83 @@ readColors();
 
 const val = (id) => parseFloat($(id).value);
 const outputs = { damage: (v) => v + "%", agents: (v) => v, steps: (v) => v, sigma: (v) => v + " m", theta: (v) => v + " m", k: (v) => v, omega: (v) => v + "°", l: (v) => v + " m" };
-for (const id in outputs) { const upd = () => ($(id + "-o").textContent = outputs[id]($(id).value)); $(id).addEventListener("input", upd); upd(); }
-function setStatus(t) { $("status").textContent = t; }
+for (const id in outputs) {
+  const upd = () => { const t = String(outputs[id]($(id).value)); $(id + "-o").textContent = t; $(id).setAttribute("aria-valuetext", t); };
+  $(id).addEventListener("input", upd); upd();
+}
+// The status line changes on every animation frame, so it is not a live region.
+// Results and errors are announced once through a separate polite region.
+function setStatus(t, announce = false) { $("status").textContent = t; if (announce) $("announce").textContent = t; }
+
+/* ------------------------------------------------------- compute worker */
+// Simulation and verification can take seconds, so they run in a Web Worker.
+// If a worker cannot start, the same calls run on the page instead.
+const compute = (() => {
+  let worker = null, nextId = 1, net = null, sim = null;
+  const pending = new Map();
+  const inline = async (msg) => {
+    await new Promise((r) => setTimeout(r, 0));        // let the status line paint first
+    if (msg.type === "net") { net = msg.net; sim = null; return {}; }
+    if (msg.type === "simulate") { sim = P.simulate(net, new Set(msg.destroyed), msg.opts); return { sim }; }
+    const r = P.run(net, new Set(msg.destroyed), sim || S.sim, msg.params);
+    return { res: { metrics: r.metrics, ok: r.ver.ok, junctions: r.inter.junctions, subs: r.comb.subs, kept: r.comb.kept } };
+  };
+  const fallBack = () => {
+    if (!worker) return;
+    worker.terminate(); worker = null;
+    for (const [, p] of pending) inline(p.msg).then(p.resolve, p.reject);
+    pending.clear();
+  };
+  try {
+    worker = new Worker("js/proteus-worker.js?v=2026-11-21");
+    worker.addEventListener("message", ({ data }) => {
+      const p = pending.get(data.id); if (!p) return;
+      pending.delete(data.id);
+      data.error ? p.reject(new Error(data.error)) : p.resolve(data);
+    });
+    worker.addEventListener("error", (e) => { e.preventDefault(); fallBack(); });
+  } catch (e) { worker = null; }
+  return (msg) => {
+    if (msg.type === "net") net = msg.net;
+    if (!worker) return inline(msg);
+    return new Promise((resolve, reject) => { const id = nextId++; pending.set(id, { resolve, reject, msg }); worker.postMessage({ ...msg, id }); });
+  };
+})();
+const plainNet = (n) => ({ nodes: n.nodes, edges: n.edges, adj: n.adj, bbox: n.bbox, length: n.length });
 
 /* ------------------------------------------------------------- networks */
 function loadNetwork(net, hint, attrib, tiles) {
   S.tilesOn = !!tiles; S.net = net; S.chains = P.chains(net); S.sim = null; S.res = null;
+  S.netReady = compute({ type: "net", net: plainNet(net) });
   $("area-hint").textContent = hint; $("attrib").textContent = attrib;
   newDamage(); fit(); runAll(false);
 }
-function selectArea(a) {
+let uhData = null;
+async function selectArea(a) {
   if (S.busy) return;
   S.area = a;
   for (const k of ["grid", "uh", "osm"]) $("area-" + k).setAttribute("aria-pressed", String(k === a));
   $("osm-box").hidden = a !== "osm";
   if (a === "grid") loadNetwork(P.syntheticGrid(), "A downtown-style street grid, rotated like central Houston. Blocks are 110 m long.", "Synthetic network");
-  if (a === "uh") loadNetwork(P.fromCompact(UH_DATA), "Footpaths of the University of Houston campus: the largest connected part of the map in ProteusData.", "UH campus: ProteusData | map tiles © OpenStreetMap contributors", true);
+  if (a === "uh") {
+    // The campus network is only downloaded when someone picks it.
+    if (!uhData) {
+      setStatus("Loading the UH campus network…");
+      try { uhData = await (await fetch("js/uh-campus.json?v=2026-11-21")).json(); }
+      catch (err) { setStatus("Couldn’t load the UH campus network. Check your connection and try again.", true); return; }
+      if (S.area !== "uh") return;
+    }
+    loadNetwork(P.fromCompact(uhData), "Footpaths of the University of Houston campus: the largest connected part of the map in ProteusData.", "UH campus: ProteusData | map tiles © OpenStreetMap contributors", true);
+  }
   if (a === "osm") { $("area-hint").textContent = "Enter a centre point and load its streets or footpaths straight from OpenStreetMap."; }
 }
-$("area-grid").onclick = () => selectArea("grid");
-$("area-uh").onclick = () => selectArea("uh");
-$("area-osm").onclick = () => selectArea("osm");
+$("area-grid").addEventListener("click", () => selectArea("grid"));
+$("area-uh").addEventListener("click", () => selectArea("uh"));
+$("area-osm").addEventListener("click", () => selectArea("osm"));
 
 async function loadOSM() {
   const m = $("osm-center").value.split(",").map((s) => parseFloat(s));
-  if (m.length !== 2 || m.some(isNaN)) { setStatus("Enter the centre as “latitude, longitude”, for example 29.7604, -95.3698."); return; }
+  if (m.length !== 2 || m.some(isNaN)) { setStatus("Enter the centre as “latitude, longitude”, for example 29.7604, -95.3698.", true); return; }
   const [lat, lon] = m, half = parseFloat($("osm-size").value), pr = P.makeProj(lat, lon);
   const [w, s] = pr.toLL(-half, -half), [e, n] = pr.toLL(half, half);
   setStatus("Downloading streets from OpenStreetMap…"); S.busy = true; $("osm-load").disabled = true;
@@ -103,10 +159,10 @@ async function loadOSM() {
     if (net.edges.length < 10) throw new Error("too few streets in this area");
     S.busy = false;
     loadNetwork(net, `${fmt(Math.round(net.length / 100) / 10)} km of streets around ${lat.toFixed(4)}, ${lon.toFixed(4)}. Real areas are large: add volunteers and walking time to cover more of them.`, "Streets: OpenFreeMap / OpenMapTiles | data and map tiles © OpenStreetMap contributors", true);
-  } catch (err) { setStatus("Couldn’t load streets: " + err.message + ". Wait a minute and try again, or pick a smaller area."); }
+  } catch (err) { setStatus("Couldn’t load streets: " + err.message + ". Wait a minute and try again, or pick a smaller area.", true); }
   finally { S.busy = false; $("osm-load").disabled = false; }
 }
-$("osm-load").onclick = loadOSM;
+$("osm-load").addEventListener("click", loadOSM);
 
 // Streets come from OpenStreetMap vector tiles served by OpenFreeMap (a CDN, fast
 // and reliable). If that fails, fall back to the public Overpass API, which is
@@ -145,7 +201,7 @@ async function overpass(query) {
 
 /* ---------------------------------------------------------------- damage */
 function newDamage() { S.seed = (S.seed * 48271 + 11) % 2147483647; S.destroyed = P.randomDestroy(S.net, val("damage"), S.seed, S.chains); }
-$("reshuffle").onclick = () => { if (S.busy) return; newDamage(); runAll(true); };
+$("reshuffle").addEventListener("click", () => { if (S.busy) return; newDamage(); runAll(true); });
 $("damage").addEventListener("change", () => { if (S.busy) return; newDamage(); runAll(true); });
 function toggleChain(c) {
   const members = S.chains.list[c], on = !S.destroyed.has(members[0]);
@@ -155,30 +211,42 @@ function toggleChain(c) {
 
 /* -------------------------------------------------------------- pipeline */
 function params() { return { theta: val("theta"), k: val("k"), omega: val("omega"), l: val("l"), junctionRadius: 15 }; }
-function runAll(animate) {
+async function runAll(animate) {
   if (!S.net) return;
-  S.busy = true; $("run").disabled = true;
+  const token = ++S.simToken;
+  S.busy = true; $("run").disabled = true; S.res = null;
   setStatus("Volunteers are walking…");
-  S.sim = P.simulate(S.net, S.destroyed, { agents: val("agents"), steps: val("steps"), sigma: val("sigma"), seed: S.seed });
-  S.res = null;
-  const finish = () => { S.animStep = Infinity; setStatus("Verifying and combining…"); draw(); setTimeout(() => { runProteus(); S.busy = false; $("run").disabled = false; }, 20); };
+  const done = () => { if (token === S.simToken) { S.busy = false; $("run").disabled = false; } };
+  try {
+    await S.netReady;
+    const { sim } = await compute({ type: "simulate", destroyed: [...S.destroyed],
+      opts: { agents: val("agents"), steps: val("steps"), sigma: val("sigma"), seed: S.seed } });
+    if (token !== S.simToken) return;
+    S.sim = sim;
+  } catch (err) { if (token === S.simToken) setStatus("The simulation stopped: " + err.message, true); done(); return; }
+  const finish = async () => { S.animStep = Infinity; setStatus("Verifying and combining…"); draw(); await runProteus(); done(); };
   if (!animate || reduceMotion) { finish(); return; }
   const total = val("steps"), dur = 2200, t0 = performance.now();
   const tick = (now) => { const f = Math.min(1, (now - t0) / dur); S.animStep = Math.max(1, Math.floor(f * total)); draw();
     setStatus(`Volunteers are walking… step ${S.animStep} of ${total}`); if (f < 1) requestAnimationFrame(tick); else finish(); };
   requestAnimationFrame(tick);
 }
-function runProteus() {
-  S.res = P.run(S.net, S.destroyed, S.sim, params());
-  const m = S.res.metrics, pct = (x) => Math.round(x * 100) + "%";
+async function runProteus() {
+  const token = ++S.runToken;
+  let res;
+  try { ({ res } = await compute({ type: "run", destroyed: [...S.destroyed], params: params() })); }
+  catch (err) { if (token === S.runToken) setStatus("Proteus stopped: " + err.message, true); return; }
+  if (token !== S.runToken) return;                 // a newer run has started
+  S.res = res;
+  const m = res.metrics, pct = (x) => Math.round(x * 100) + "%";
   $("m-cov").textContent = pct(m.coverage); $("m-ver").textContent = pct(m.points ? m.verifiedPoints / m.points : 0);
   $("m-rec").textContent = pct(m.recall); $("m-pre").textContent = pct(m.precision);
   $("m-del").textContent = S.destroyed.size ? pct(m.destroyedRemoved) : "–"; $("m-jn").textContent = fmt(m.junctions);
   const ms = Math.round(m.ms.verify + m.ms.intersections + m.ms.combine);
-  setStatus(`${fmt(m.points)} GPS fixes from ${val("agents")} volunteers | Proteus ran in ${fmt(ms)} ms`);
+  setStatus(`${fmt(m.points)} GPS fixes from ${val("agents")} volunteers | Proteus ran in ${fmt(ms)} ms`, true);
   draw();
 }
-$("run").onclick = () => { if (!S.busy) runAll(true); };
+$("run").addEventListener("click", () => { if (!S.busy) runAll(true); });
 let rerun = 0;
 for (const id of ["theta", "k", "omega", "l"]) $(id).addEventListener("input", () => {
   clearTimeout(rerun); if (!S.sim || S.busy) return; setStatus("Re-running Proteus…");
@@ -221,6 +289,34 @@ function drawTiles(W, H) {
   ctx.restore();
 }
 
+// Hundreds of thousands of GPS fixes: write them into a pixel buffer and draw
+// it with one call, instead of one canvas call per point.
+const dotLayer = document.createElement("canvas"), dotCtx = dotLayer.getContext("2d");
+let dotImage = null;
+function rgb(hex) { const v = parseInt(hex.replace("#", ""), 16); return [(v >> 16) & 255, (v >> 8) & 255, v & 255]; }
+function drawPoints(sim, keep, color, alpha, r) {
+  const W = canvas.width, H = canvas.height, d = W / size()[0];
+  if (!dotImage || dotImage.width !== W || dotImage.height !== H) {
+    dotLayer.width = W; dotLayer.height = H; dotImage = dotCtx.createImageData(W, H);
+  }
+  const px = new Uint32Array(dotImage.data.buffer); px.fill(0);
+  const [cr, cg, cb] = rgb(color), packed = (255 << 24 | cb << 16 | cg << 8 | cr) >>> 0;   // little-endian RGBA
+  const rp = Math.max(1, Math.round(r * d)), half = rp >> 1;
+  const k = S.view.s * d, ox = W / 2 - S.view.cx * k, oy = H / 2 + S.view.cy * k;
+  const X = sim.X, Y = sim.Y;
+  for (let i = 0, n = sim.n; i < n; i++) {
+    if (!keep(i)) continue;
+    const x0 = Math.round(X[i] * k + ox) - half, y0 = Math.round(oy - Y[i] * k) - half;
+    if (x0 >= W || y0 >= H || x0 + rp <= 0 || y0 + rp <= 0) continue;
+    for (let y = Math.max(0, y0); y < Math.min(H, y0 + rp); y++) {
+      const row = y * W;
+      for (let x = Math.max(0, x0); x < Math.min(W, x0 + rp); x++) px[row + x] = packed;
+    }
+  }
+  dotCtx.putImageData(dotImage, 0, 0);
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = alpha; ctx.drawImage(dotLayer, 0, 0); ctx.restore();
+}
+
 function draw() {
   const [W, H] = size(); if (!W) return;
   ctx.fillStyle = colors.mapbg; ctx.fillRect(0, 0, W, H);
@@ -243,24 +339,20 @@ function draw() {
     for (const i of S.chains.list[S.hoverChain]) { const e = net.edges[i], a = nodes[e.a], b = nodes[e.b]; ctx.moveTo(sx(a[0]), sy(a[1])); ctx.lineTo(sx(b[0]), sy(b[1])); }
     ctx.stroke(); ctx.globalAlpha = 1;
   }
-  const sim = S.sim, ok = S.res && S.animStep === Infinity ? S.res.ver.ok : null;
+  const sim = S.sim, ok = S.res && S.animStep === Infinity ? S.res.ok : null;
   if (sim && (layer("traces") || layer("verified"))) {
-    const r = Math.max(1, Math.min(2, S.view.s * 0.7)), lim = S.animStep;
-    if (layer("traces")) { ctx.fillStyle = colors.trace; ctx.globalAlpha = 0.35;
-      for (let i = 0; i < sim.n; i++) { if (sim.S[i] > lim || (ok && ok[i] && layer("verified"))) continue; ctx.fillRect(sx(sim.X[i]) - r / 2, sy(sim.Y[i]) - r / 2, r, r); }
-      ctx.globalAlpha = 1; }
-    if (ok && layer("verified")) { ctx.fillStyle = colors.verified; ctx.globalAlpha = layer("final") ? 0.16 : 0.45;
-      for (let i = 0; i < sim.n; i++) if (ok[i]) ctx.fillRect(sx(sim.X[i]) - r / 2, sy(sim.Y[i]) - r / 2, r, r);
-      ctx.globalAlpha = 1; }
+    const r = Math.max(1, Math.min(2, S.view.s * 0.7)), lim = S.animStep, showVer = ok && layer("verified");
+    if (layer("traces")) drawPoints(sim, (i) => sim.S[i] <= lim && !(showVer && ok[i]), colors.trace, 0.35, r);
+    if (showVer) drawPoints(sim, (i) => ok[i] === 1, colors.verified, layer("final") ? 0.16 : 0.45, r);
   }
   if (S.res && layer("final")) {
     ctx.strokeStyle = colors.final; ctx.lineWidth = Math.max(2.5, 4 * z); ctx.beginPath();
-    S.res.comb.subs.forEach((g, i) => { if (!S.res.comb.kept[i]) return; ctx.moveTo(sx(g[0]), sy(g[1])); ctx.lineTo(sx(g[2]), sy(g[3])); });
+    S.res.subs.forEach((g, i) => { if (!S.res.kept[i]) return; ctx.moveTo(sx(g[0]), sy(g[1])); ctx.lineTo(sx(g[2]), sy(g[3])); });
     ctx.stroke();
   }
   if (S.res && layer("junctions")) {
     ctx.strokeStyle = colors.junction; ctx.lineWidth = 2;
-    for (const [x, y] of S.res.inter.junctions) { ctx.beginPath(); ctx.arc(sx(x), sy(y), 5, 0, 2 * Math.PI); ctx.stroke(); }
+    for (const [x, y] of S.res.junctions) { ctx.beginPath(); ctx.arc(sx(x), sy(y), 5, 0, 2 * Math.PI); ctx.stroke(); }
   }
   if (sim && S.animStep !== Infinity) {
     ctx.fillStyle = colors.agent;
@@ -286,11 +378,12 @@ canvas.addEventListener("pointerup", (e) => { const d = drag; drag = null; canva
 canvas.addEventListener("pointerleave", () => { if (S.hoverChain >= 0) { S.hoverChain = -1; draw(); } });
 function zoomAt(f, px, py) { const x = wx(px), y = wy(py); S.view.s *= f; S.view.cx = x - (px - size()[0] / 2) / S.view.s; S.view.cy = y + (py - size()[1] / 2) / S.view.s; draw(); }
 canvas.addEventListener("wheel", (e) => { e.preventDefault(); zoomAt(Math.exp(-e.deltaY * 0.0015), e.offsetX, e.offsetY); }, { passive: false });
-$("zin").onclick = () => zoomAt(1.4, size()[0] / 2, size()[1] / 2);
-$("zout").onclick = () => zoomAt(1 / 1.4, size()[0] / 2, size()[1] / 2);
-$("zfit").onclick = fit;
+$("zin").addEventListener("click", () => zoomAt(1.4, size()[0] / 2, size()[1] / 2));
+$("zout").addEventListener("click", () => zoomAt(1 / 1.4, size()[0] / 2, size()[1] / 2));
+$("zfit").addEventListener("click", fit);
 
 /* ------------------------------------------------------------------ boot */
+$("controls").addEventListener("submit", (e) => e.preventDefault());
 resize();
 selectArea("grid");
 })();
