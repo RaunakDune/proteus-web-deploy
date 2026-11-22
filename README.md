@@ -17,6 +17,10 @@ The site is static and is served by GitHub Pages at https://crowdsensinglab.org.
 | `js/uh-campus.json` | UH campus footpath network from [ProteusData](https://github.com/UH-DAIS/ProteusData), downloaded only when that area is picked |
 | `fonts/` | Self-hosted Archivo, Source Serif 4 and IBM Plex Mono (SIL Open Font License, see `fonts/LICENSE.txt`) |
 | `og/proteus-card.jpg` | Preview image for links shared on social media |
+| `js/uh-campus.js` | The same UH campus network as a script, used by the DEIMOSBC page |
+| `deimosbc/index.html` | DEIMOSBC page at [/deimosbc](https://crowdsensinglab.org/deimosbc/) (BRAINS 2021) |
+| `deimosbc/js/deimosbc-engine.js` | Browser port of DEIMOSBC: volunteers, Trace Management System, smart contracts, consensus, SHA-256 ledger |
+| `deimosbc/js/app.js` | DEIMOSBC demo UI (reuses the network loaders in `js/proteus-engine.js`) |
 | `CNAME` | Custom domain for GitHub Pages |
 
 The reference Python implementations live at
@@ -28,3 +32,15 @@ The reference Python implementations live at
 ```bash
 python3 -m http.server 8000   # then open http://localhost:8000
 ```
+
+## Updating
+
+GitHub Pages lets browsers cache files for 10 minutes. After changing a file in `js/`,
+bump its `?v=` tag so visitors get the new copy: the `<script>` lines in `index.html`,
+the worker and campus-data URLs in `js/app.js`, and the `importScripts` line in
+`js/proteus-worker.js`.
+
+The main page sets a Content Security Policy in a `<meta>` tag. It allows scripts, fonts
+and workers from this site only, OpenStreetMap map tiles, and network requests to
+OpenFreeMap and the two Overpass servers. If the demo needs a new outside service, add
+its host to that tag, or the browser will block it.
